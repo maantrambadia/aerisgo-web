@@ -9,26 +9,43 @@ const BASE_URL =
 
 const api = axios.create({
   baseURL: BASE_URL,
-  withCredentials: true, // Important for cookies
 });
 
-// Global response error handling
+// Request interceptor - Add Bearer token to requests
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("aerisgo_token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor - Handle errors globally
 api.interceptors.response.use(
   (res) => res,
   (error) => {
     const status = error?.response?.status;
     const message = error?.response?.data?.message;
-    const url = error?.config?.url || "";
 
-    // Only redirect on 401 for /auth/me endpoint (session check)
-    // Don't redirect for other endpoints to avoid infinite loops
-    if (status === 401 && url.includes("/auth/me")) {
+    // Handle 401 - Unauthorized (token expired or invalid)
+    if (status === 401) {
+      localStorage.removeItem("aerisgo_token");
+      localStorage.removeItem("aerisgo_user");
+
+      // Only redirect if not already on auth pages
       if (typeof window !== "undefined") {
         const current = window.location.pathname;
         if (
           current !== "/sign-in" &&
-          current !== "/request-access" &&
-          current !== "/pending-approval"
+          current !== "/sign-up" &&
+          current !== "/verify-otp" &&
+          current !== "/forgot-password" &&
+          current !== "/reset-password"
         ) {
           toast.error(message || "Session expired. Please sign in again.");
           window.location.assign("/sign-in");

@@ -4,17 +4,20 @@ import { RouterProvider } from "react-router";
 import "./App.css";
 import router from "./App.jsx";
 import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/context/AuthContext";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <Toaster
-      toastOptions={{
-        style: {
-          borderRadius: "var(--radius)",
-        },
-      }}
-      position="top-center"
-    />
-    <RouterProvider router={router} />
+    <AuthProvider>
+      <Toaster
+        toastOptions={{
+          style: {
+            borderRadius: "var(--radius)",
+          },
+        }}
+        position="top-center"
+      />
+      <RouterProvider router={router} />
+    </AuthProvider>
   </StrictMode>
 );
