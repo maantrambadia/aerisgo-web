@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router";
+import { useNavigate, Link, useLocation } from "react-router";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import useDocumentTitle from "@/hooks/useDocumentTitle";
 
 export function SignInForm({ className, ...props }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -30,7 +31,19 @@ export function SignInForm({ className, ...props }) {
 
     try {
       await login(formData);
-      navigate("/");
+
+      // Small delay to ensure auth state is updated
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Redirect to the page they were trying to access, or home if none
+      const from = location.state?.from;
+
+      if (from && from.pathname) {
+        const redirectPath = from.pathname + (from.search || "");
+        navigate(redirectPath, { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
     } catch (error) {
       // Error already handled in AuthContext
     } finally {

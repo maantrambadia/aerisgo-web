@@ -1,20 +1,18 @@
-import { Navigate } from "react-router";
+import { Navigate, useLocation } from "react-router";
 import { useAuth } from "@/context/AuthContext";
-import { Loader2 } from "lucide-react";
+import LoadingFallback from "@/components/LoadingFallback";
 
 export default function RequireAuth({ children }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-svh">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <LoadingFallback />;
   }
 
   if (!user) {
-    return <Navigate to="/sign-in" replace />;
+    // Save the current location they were trying to access
+    return <Navigate to="/sign-in" state={{ from: location }} replace />;
   }
 
   return children;

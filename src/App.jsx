@@ -6,6 +6,8 @@ import RequireGuest from "@/components/RequireGuest.jsx";
 
 // Lazy load pages
 const Home = lazy(() => import("@/pages/Home.jsx"));
+const SearchResults = lazy(() => import("@/pages/SearchResults.jsx"));
+const FlightDetails = lazy(() => import("@/pages/FlightDetails.jsx"));
 const SignIn = lazy(() => import("@/pages/SignIn.jsx"));
 const SignUp = lazy(() => import("@/pages/SignUp.jsx"));
 const VerifyOTP = lazy(() => import("@/pages/VerifyOTP.jsx"));
@@ -19,6 +21,25 @@ const router = createBrowserRouter([
       <Suspense fallback={<LoadingFallback />}>
         <Home />
       </Suspense>
+    ),
+  },
+  {
+    path: "/search-results",
+    element: (
+      <Suspense fallback={<LoadingFallback />}>
+        s
+        <SearchResults />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/flight/:id",
+    element: (
+      <RequireAuth>
+        <Suspense fallback={<LoadingFallback />}>
+          <FlightDetails />
+        </Suspense>
+      </RequireAuth>
     ),
   },
   {

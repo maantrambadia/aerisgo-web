@@ -4,7 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
+import { AirportSelector } from "@/components/AirportSelector";
+import { PassengerSelector } from "@/components/PassengerSelector";
+import { parseCityName } from "@/lib/airports";
+import { toast } from "sonner";
 import {
   Plane,
   MapPin,
@@ -21,7 +25,12 @@ import {
 
 export default function Home() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [tripType, setTripType] = useState("one-way");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [date, setDate] = useState("");
+  const [passengers, setPassengers] = useState({ adults: 1, children: 0 });
 
   const features = [
     {
@@ -204,46 +213,50 @@ export default function Home() {
             >
               {/* Trip Type Selector */}
               <div className="flex gap-3 mb-6">
-                {["one-way", "round-trip"].map((type) => (
-                  <motion.button
-                    key={type}
-                    onClick={() => setTripType(type)}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className={`px-6 py-2.5 rounded-full font-medium transition-all ${
-                      tripType === type
-                        ? "bg-primary text-primary-foreground shadow-md"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
-                    }`}
-                  >
-                    {type === "one-way" ? "One Way" : "Round Trip"}
-                  </motion.button>
-                ))}
+                <motion.button
+                  onClick={() => setTripType("one-way")}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-6 py-2.5 rounded-full font-medium transition-all bg-primary text-primary-foreground shadow-md"
+                >
+                  One Way
+                </motion.button>
+                <motion.button
+                  onClick={() => {
+                    toast.info("Round Trip is currently not available");
+                  }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-6 py-2.5 rounded-full font-medium transition-all bg-muted text-muted-foreground hover:bg-muted/80 opacity-60 cursor-not-allowed"
+                  disabled
+                >
+                  Round Trip
+                </motion.button>
               </div>
 
               {/* Search Form */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <motion.div whileHover={{ scale: 1.02 }} className="space-y-2">
-                  <Label htmlFor="from" className="flex items-center gap-2">
+                  <Label className="flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
                     From
                   </Label>
-                  <Input
-                    id="from"
-                    placeholder="Departure city"
-                    className="h-12 rounded-2xl"
+                  <AirportSelector
+                    value={from}
+                    onValueChange={setFrom}
+                    placeholder="Select departure city"
                   />
                 </motion.div>
 
                 <motion.div whileHover={{ scale: 1.02 }} className="space-y-2">
-                  <Label htmlFor="to" className="flex items-center gap-2">
+                  <Label className="flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
                     To
                   </Label>
-                  <Input
-                    id="to"
-                    placeholder="Arrival city"
-                    className="h-12 rounded-2xl"
+                  <AirportSelector
+                    value={to}
+                    onValueChange={setTo}
+                    placeholder="Select arrival city"
                   />
                 </motion.div>
 
@@ -252,23 +265,24 @@ export default function Home() {
                     <Calendar className="h-4 w-4" />
                     Date
                   </Label>
-                  <Input id="date" type="date" className="h-12 rounded-2xl" />
+                  <Input
+                    id="date"
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
+                    className="h-12 rounded-2xl"
+                  />
                 </motion.div>
 
                 <motion.div whileHover={{ scale: 1.02 }} className="space-y-2">
-                  <Label
-                    htmlFor="passengers"
-                    className="flex items-center gap-2"
-                  >
+                  <Label className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
                     Passengers
                   </Label>
-                  <Input
-                    id="passengers"
-                    type="number"
-                    min="1"
-                    defaultValue="1"
-                    className="h-12 rounded-2xl"
+                  <PassengerSelector
+                    value={passengers}
+                    onValueChange={setPassengers}
                   />
                 </motion.div>
               </div>
@@ -281,6 +295,49 @@ export default function Home() {
                 <Button
                   size="lg"
                   className="w-full h-12 text-base group rounded-full"
+                  onClick={() => {
+                    // Validation
+                    const sourceCity = parseCityName(from);
+                    const destCity = parseCityName(to);
+
+                    if (!sourceCity || !destCity) {
+                      toast.error("Please select departure and arrival cities");
+                      return;
+                    }
+
+                    if (sourceCity.toLowerCase() === destCity.toLowerCase()) {
+                      toast.error(
+                        "Departure and arrival cities must be different"
+                      );
+                      return;
+                    }
+
+                    if (!date) {
+                      toast.error("Please select a travel date");
+                      return;
+                    }
+
+                    const selectedDate = new Date(date);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    selectedDate.setHours(0, 0, 0, 0);
+
+                    if (selectedDate < today) {
+                      toast.error("Travel date cannot be in the past");
+                      return;
+                    }
+
+                    // Navigate to search results
+                    const totalPassengers =
+                      passengers.adults + passengers.children;
+                    navigate(
+                      `/search-results?from=${encodeURIComponent(
+                        sourceCity
+                      )}&to=${encodeURIComponent(
+                        destCity
+                      )}&date=${date}&passengers=${totalPassengers}`
+                    );
+                  }}
                 >
                   Search Flights
                   <motion.div
