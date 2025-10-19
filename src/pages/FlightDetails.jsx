@@ -412,8 +412,12 @@ export default function FlightDetails() {
             size="lg"
             className="w-full h-12 text-base rounded-full"
             onClick={() => {
-              // Navigate to seat selection (to be implemented)
-              console.log("Navigate to seat selection");
+              // Store flight data and navigate to seat selection
+              sessionStorage.setItem(
+                `flight_${flight._id}`,
+                JSON.stringify({ flight, from, to, date, passengers })
+              );
+              navigate(`/seat-selection/${flight._id}`);
             }}
           >
             Select Seat

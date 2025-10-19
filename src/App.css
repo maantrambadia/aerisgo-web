@@ -261,6 +261,22 @@
   * {
     -ms-overflow-style: none;
   }
+
+  /* Custom scrollbar for seat map */
+  .seat-map-scroll::-webkit-scrollbar {
+    height: 8px;
+  }
+  .seat-map-scroll::-webkit-scrollbar-track {
+    background: rgba(227, 215, 203, 0.2);
+    border-radius: 4px;
+  }
+  .seat-map-scroll::-webkit-scrollbar-thumb {
+    background: rgba(84, 20, 36, 0.3);
+    border-radius: 4px;
+  }
+  .seat-map-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(84, 20, 36, 0.5);
+  }
 }
 
 .dark {
