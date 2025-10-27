@@ -1,7 +1,12 @@
 import api from "./api";
 
 // Search flights
-export const searchFlights = async ({ source, destination, date, passengers }) => {
+export const searchFlights = async ({
+  source,
+  destination,
+  date,
+  passengers,
+}) => {
   try {
     const { data } = await api.get("/flights/search", {
       params: {

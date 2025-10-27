@@ -21,6 +21,10 @@ import {
   Star,
   TrendingUp,
   Globe,
+  UserCircle,
+  LogOut,
+  LogIn,
+  UserPlus,
 } from "lucide-react";
 
 export default function Home() {
@@ -124,12 +128,31 @@ export default function Home() {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
+                      <Link to="/account">
+                        <Button
+                          variant="outline"
+                          className="rounded-full h-9 px-3 sm:px-4"
+                        >
+                          <UserCircle className="w-4 h-4" />
+                          <span className="hidden sm:inline sm:ml-2">
+                            My Account
+                          </span>
+                        </Button>
+                      </Link>
+                    </motion.div>
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
                       <Button
                         variant="outline"
                         onClick={logout}
-                        className="rounded-full h-9 px-4"
+                        className="rounded-full h-9 px-3 sm:px-4"
                       >
-                        Sign out
+                        <LogOut className="w-4 h-4" />
+                        <span className="hidden sm:inline sm:ml-2">
+                          Sign out
+                        </span>
                       </Button>
                     </motion.div>
                   </>
@@ -142,17 +165,27 @@ export default function Home() {
                       <Button
                         variant="ghost"
                         asChild
-                        className="rounded-full h-9 px-4"
+                        className="rounded-full h-9 px-3 sm:px-4"
                       >
-                        <Link to="/sign-in">Sign in</Link>
+                        <Link to="/sign-in">
+                          <LogIn className="w-4 h-4" />
+                          <span className="hidden sm:inline sm:ml-2">
+                            Sign in
+                          </span>
+                        </Link>
                       </Button>
                     </motion.div>
                     <motion.div
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
-                      <Button asChild className="rounded-full h-9 px-4">
-                        <Link to="/sign-up">Sign up</Link>
+                      <Button asChild className="rounded-full h-9 px-3 sm:px-4">
+                        <Link to="/sign-up">
+                          <UserPlus className="w-4 h-4" />
+                          <span className="hidden sm:inline sm:ml-2">
+                            Sign up
+                          </span>
+                        </Link>
                       </Button>
                     </motion.div>
                   </>

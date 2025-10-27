@@ -7,7 +7,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-export function PassengerSelector({ value = { adults: 1, children: 0 }, onValueChange }) {
+export function PassengerSelector({
+  value = { adults: 1, children: 0 },
+  onValueChange,
+}) {
   const [open, setOpen] = useState(false);
 
   const handleIncrement = (type) => {
@@ -20,14 +23,16 @@ export function PassengerSelector({ value = { adults: 1, children: 0 }, onValueC
   const handleDecrement = (type) => {
     if (type === "adults" && value.adults <= 1) return;
     if (type === "children" && value.children <= 0) return;
-    
+
     onValueChange({
       ...value,
       [type]: value[type] - 1,
     });
   };
 
-  const displayText = `${value.adults} Adult${value.adults > 1 ? "s" : ""}, ${value.children} Child${value.children !== 1 ? "ren" : ""}`;
+  const displayText = `${value.adults} Adult${value.adults > 1 ? "s" : ""}, ${
+    value.children
+  } Child${value.children !== 1 ? "ren" : ""}`;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -67,7 +72,9 @@ export function PassengerSelector({ value = { adults: 1, children: 0 }, onValueC
               >
                 <Minus className="h-4 w-4" />
               </Button>
-              <span className="w-8 text-center font-medium">{value.adults}</span>
+              <span className="w-8 text-center font-medium">
+                {value.adults}
+              </span>
               <Button
                 variant="outline"
                 size="icon"
@@ -95,7 +102,9 @@ export function PassengerSelector({ value = { adults: 1, children: 0 }, onValueC
               >
                 <Minus className="h-4 w-4" />
               </Button>
-              <span className="w-8 text-center font-medium">{value.children}</span>
+              <span className="w-8 text-center font-medium">
+                {value.children}
+              </span>
               <Button
                 variant="outline"
                 size="icon"

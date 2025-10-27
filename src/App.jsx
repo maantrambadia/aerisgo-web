@@ -18,6 +18,7 @@ const SignUp = lazy(() => import("@/pages/SignUp.jsx"));
 const VerifyOTP = lazy(() => import("@/pages/VerifyOTP.jsx"));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPassword.jsx"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword.jsx"));
+const Account = lazy(() => import("@/pages/Account.jsx"));
 
 const router = createBrowserRouter([
   {
@@ -32,7 +33,6 @@ const router = createBrowserRouter([
     path: "/search-results",
     element: (
       <Suspense fallback={<LoadingFallback />}>
-        s
         <SearchResults />
       </Suspense>
     ),
@@ -73,6 +73,16 @@ const router = createBrowserRouter([
       <RequireAuth>
         <Suspense fallback={<LoadingFallback />}>
           <BookingSuccess />
+        </Suspense>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/account",
+    element: (
+      <RequireAuth>
+        <Suspense fallback={<LoadingFallback />}>
+          <Account />
         </Suspense>
       </RequireAuth>
     ),
