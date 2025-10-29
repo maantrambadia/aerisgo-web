@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useLocation, useNavigate } from "react-router";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft,
   Plane,
@@ -8,6 +8,8 @@ import {
   DoorOpen,
   Coffee,
   AlertCircle,
+  FileText,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -105,6 +107,8 @@ export default function SeatSelection() {
   const [seats, setSeats] = useState([]);
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [pricingConfig, setPricingConfig] = useState(null);
+  const [showDocumentModal, setShowDocumentModal] = useState(false);
+  const [hasDocuments, setHasDocuments] = useState(false);
 
   // Get flight data from location state or sessionStorage
   const getFlightData = () => {
@@ -136,6 +140,19 @@ export default function SeatSelection() {
   async function fetchData() {
     try {
       setLoading(true);
+
+      // Check if user has documents
+      const profileRes = await api.get("/profile");
+      const userDocs = profileRes.data?.documents || [];
+
+      if (userDocs.length === 0) {
+        setLoading(false);
+        setHasDocuments(false);
+        setShowDocumentModal(true);
+        return;
+      }
+
+      setHasDocuments(true);
 
       // Check if user already has a booking on this flight
       const bookingsRes = await api.get("/bookings/my-bookings");
@@ -206,7 +223,7 @@ export default function SeatSelection() {
       return;
     }
 
-    // Store selection in sessionStorage and navigate
+    // Store selection in sessionStorage and navigate to passenger details
     sessionStorage.setItem(
       `booking_${flight._id}`,
       JSON.stringify({
@@ -215,11 +232,10 @@ export default function SeatSelection() {
         from,
         to,
         date,
-        passengers,
       })
     );
 
-    navigate(`/booking-confirmation/${flight._id}`);
+    navigate(`/passenger-details/${flight._id}`);
   }
 
   // Group seats by row
@@ -671,10 +687,88 @@ export default function SeatSelection() {
             onClick={handleContinue}
             disabled={selectedSeats.length === 0}
           >
-            Continue to Payment
+            Continue to Passenger Details
           </Button>
         </motion.div>
       </div>
+
+      {/* Document Required Modal */}
+      <AnimatePresence>
+        {showDocumentModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-background rounded-[32px] border-2 max-w-md w-full overflow-hidden"
+              style={{ borderColor: "rgba(84, 20, 36, 0.15)" }}
+            >
+              <div className="p-8 text-center">
+                {/* Icon */}
+                <div
+                  className="w-24 h-24 rounded-full mx-auto mb-5 flex items-center justify-center"
+                  style={{ backgroundColor: "rgba(84, 20, 36, 0.1)" }}
+                >
+                  <FileText
+                    className="h-12 w-12"
+                    style={{ color: "#541424" }}
+                  />
+                </div>
+
+                {/* Title */}
+                <h2
+                  className="text-2xl font-bold mb-2"
+                  style={{ color: "#541424" }}
+                >
+                  Document Required
+                </h2>
+
+                {/* Subtitle */}
+                <p
+                  className="text-base mb-6"
+                  style={{ color: "rgba(84, 20, 36, 0.7)" }}
+                >
+                  Please add your identification document (Aadhar or Passport)
+                  to continue booking
+                </p>
+
+                {/* Buttons */}
+                <div className="space-y-3">
+                  <Button
+                    size="lg"
+                    className="w-full h-12 text-base rounded-full"
+                    onClick={() => {
+                      setShowDocumentModal(false);
+                      navigate("/account?tab=profile");
+                    }}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Add Document
+                  </Button>
+                  <button
+                    onClick={() => {
+                      setShowDocumentModal(false);
+                      navigate(-1);
+                    }}
+                    className="w-full py-4 rounded-full text-base font-semibold transition-colors"
+                    style={{
+                      backgroundColor: "rgba(84, 20, 36, 0.1)",
+                      color: "#541424",
+                    }}
+                  >
+                    Go Back
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

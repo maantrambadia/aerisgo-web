@@ -64,9 +64,11 @@ export default function BookingConfirmation() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [rewardBalance, setRewardBalance] = useState(0);
   const [rewardPointsToUse, setRewardPointsToUse] = useState(0);
   const [pricingConfig, setPricingConfig] = useState(null);
+  const [pointsEarned, setPointsEarned] = useState(0);
 
   // Get booking data from sessionStorage
   const getBookingData = () => {
@@ -189,25 +191,42 @@ export default function BookingConfirmation() {
         totalAmount: finalAmount,
         paymentMethod: "card",
         rewardPointsUsed: rewardPointsToUse,
+        passengers: passengers || [],
       };
 
       const res = await api.post("/bookings/create", bookingPayload);
 
-      setProcessing(false);
+      // Store points earned from response
+      if (res.data?.pointsEarned) {
+        setPointsEarned(res.data.pointsEarned);
+      }
 
       // Clear sessionStorage
       sessionStorage.removeItem(`booking_${flight._id}`);
       sessionStorage.removeItem(`flight_${flight._id}`);
 
-      // Navigate to success page with booking details
-      navigate("/booking-success", {
-        state: {
-          pointsEarned: res.data?.pointsEarned || 0,
-          bookingDetails: res.data,
-        },
-      });
+      setProcessing(false);
+      setShowSuccess(true);
+
+      // Navigate to account page after 5 seconds
+      setTimeout(() => {
+        navigate("/account?tab=tickets");
+      }, 5000);
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Failed to complete booking");
+      // Check if error is due to missing documents
+      if (err?.response?.data?.requiresDocument) {
+        toast.error(
+          err?.response?.data?.message ||
+            "Please add your identification document"
+        );
+        setTimeout(() => {
+          navigate("/account?tab=profile");
+        }, 2000);
+      } else {
+        toast.error(
+          err?.response?.data?.message || "Failed to complete booking"
+        );
+      }
       setProcessing(false);
     }
   }
@@ -238,8 +257,95 @@ export default function BookingConfirmation() {
     }
   };
 
-  if (loading || !flight || !seats) {
+  // Show loading fallback unless we're showing the success modal
+  if (loading || (!flight && !showSuccess) || (!seats && !showSuccess)) {
     return <LoadingFallback />;
+  }
+
+  // If showing success modal, don't render the main content
+  if (showSuccess && (!flight || !seats)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+        {/* Success Modal */}
+        <AnimatePresence>
+          {showSuccess && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                className="bg-background rounded-[32px] border-2 max-w-md w-full overflow-hidden"
+                style={{ borderColor: "rgba(84, 20, 36, 0.15)" }}
+              >
+                <div className="p-8 text-center">
+                  {/* Success Icon */}
+                  <div className="w-24 h-24 rounded-full bg-green-500 mx-auto mb-5 flex items-center justify-center shadow-lg">
+                    <Check className="h-14 w-14 text-white" strokeWidth={3} />
+                  </div>
+
+                  {/* Title */}
+                  <h2
+                    className="text-3xl font-bold mb-2"
+                    style={{ color: "#541424" }}
+                  >
+                    Booking Confirmed!
+                  </h2>
+
+                  {/* Subtitle */}
+                  <p
+                    className="text-base mb-4"
+                    style={{ color: "rgba(84, 20, 36, 0.7)" }}
+                  >
+                    Your flight has been booked successfully
+                  </p>
+
+                  {/* Divider */}
+                  <div
+                    className="w-full h-px my-2"
+                    style={{ backgroundColor: "rgba(84, 20, 36, 0.1)" }}
+                  />
+
+                  {/* Points Earned Badge */}
+                  {pointsEarned > 0 && (
+                    <div
+                      className="rounded-[20px] px-5 py-4 border mt-3"
+                      style={{
+                        backgroundColor: "rgba(16, 185, 129, 0.1)",
+                        borderColor: "rgba(16, 185, 129, 0.2)",
+                      }}
+                    >
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <Gift className="h-5 w-5 text-green-600" />
+                        <span className="text-green-700 font-bold text-base">
+                          +{pointsEarned} Reward Points Earned!
+                        </span>
+                      </div>
+                      <p className="text-green-700/70 font-semibold text-xs">
+                        5% of booking amount added to your account
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Info Text */}
+                  <p
+                    className="text-sm mt-5"
+                    style={{ color: "rgba(84, 20, 36, 0.6)" }}
+                  >
+                    Redirecting to your tickets...
+                  </p>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
   }
 
   const getSeatColor = (travelClass) => {
@@ -415,7 +521,8 @@ export default function BookingConfirmation() {
                   className="font-semibold text-sm mt-0.5"
                   style={{ color: "#e3d7cb" }}
                 >
-                  {passengers} Passenger{passengers > 1 ? "s" : ""}
+                  {passengers?.length || 1} Passenger
+                  {(passengers?.length || 1) > 1 ? "s" : ""}
                 </p>
               </div>
             </div>
@@ -918,6 +1025,85 @@ export default function BookingConfirmation() {
                     Your payment is secure and encrypted
                   </span>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Success Modal */}
+      <AnimatePresence>
+        {showSuccess && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 20, stiffness: 300 }}
+              className="bg-background rounded-[32px] border-2 max-w-md w-full overflow-hidden"
+              style={{ borderColor: "rgba(84, 20, 36, 0.15)" }}
+            >
+              <div className="p-8 text-center">
+                {/* Success Icon */}
+                <div className="w-24 h-24 rounded-full bg-green-500 mx-auto mb-5 flex items-center justify-center shadow-lg">
+                  <Check className="h-14 w-14 text-white" strokeWidth={3} />
+                </div>
+
+                {/* Title */}
+                <h2
+                  className="text-3xl font-bold mb-2"
+                  style={{ color: "#541424" }}
+                >
+                  Booking Confirmed!
+                </h2>
+
+                {/* Subtitle */}
+                <p
+                  className="text-base mb-4"
+                  style={{ color: "rgba(84, 20, 36, 0.7)" }}
+                >
+                  Your flight has been booked successfully
+                </p>
+
+                {/* Divider */}
+                <div
+                  className="w-full h-px my-2"
+                  style={{ backgroundColor: "rgba(84, 20, 36, 0.1)" }}
+                />
+
+                {/* Points Earned Badge */}
+                {pointsEarned > 0 && (
+                  <div
+                    className="rounded-[20px] px-5 py-4 border mt-3"
+                    style={{
+                      backgroundColor: "rgba(16, 185, 129, 0.1)",
+                      borderColor: "rgba(16, 185, 129, 0.2)",
+                    }}
+                  >
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <Gift className="h-5 w-5 text-green-600" />
+                      <span className="text-green-700 font-bold text-base">
+                        +{pointsEarned} Reward Points Earned!
+                      </span>
+                    </div>
+                    <p className="text-green-700/70 font-semibold text-xs">
+                      5% of booking amount added to your account
+                    </p>
+                  </div>
+                )}
+
+                {/* Info Text */}
+                <p
+                  className="text-sm mt-5"
+                  style={{ color: "rgba(84, 20, 36, 0.6)" }}
+                >
+                  Redirecting to your tickets...
+                </p>
               </div>
             </motion.div>
           </motion.div>

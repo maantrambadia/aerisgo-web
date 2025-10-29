@@ -119,20 +119,20 @@ export default function Account() {
                   )}
                 </div>
                 <div className="flex-1 text-center sm:text-left">
-                  <h1 className="text-2xl sm:text-3xl font-bold">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-secondary">
                     {user?.name || "Traveler"}
                   </h1>
-                  <p className="text-white/80 mt-1 text-sm sm:text-base break-all">
+                  <p className="text-secondary mt-1 text-sm sm:text-base break-all">
                     {user?.email}
                   </p>
                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-4 mt-3">
-                    <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full">
+                    <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-secondary">
                       <Phone className="w-3 h-3" />
                       <span className="text-xs sm:text-sm">{user?.phone}</span>
                     </div>
                     <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full">
                       <User className="w-3 h-3" />
-                      <span className="text-xs sm:text-sm capitalize">
+                      <span className="text-xs sm:text-sm capitalize text-secondary">
                         {user?.gender || "other"}
                       </span>
                     </div>

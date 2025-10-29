@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { getMyBookings, cancelBooking } from "@/lib/bookings";
 import { Plane, Ticket, Calendar, MapPin, ChevronRight } from "lucide-react";
+import BoardingPassModal from "./BoardingPassModal";
 
 export default function TicketsTab() {
   const [bookings, setBookings] = useState([]);
@@ -22,6 +23,7 @@ export default function TicketsTab() {
   const [filter, setFilter] = useState("upcoming");
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [showBoardingPass, setShowBoardingPass] = useState(false);
 
   useEffect(() => {
     loadBookings();
@@ -197,11 +199,25 @@ export default function TicketsTab() {
                     <div className="flex items-center justify-between pt-2 border-t border-secondary/20">
                       <div>
                         <p className="text-secondary/70 text-[10px]">
-                          {booking.flightId.flightNumber} • Seat{" "}
-                          {booking.seatNumber}
+                          {booking.flightId.flightNumber} •{" "}
+                          {booking.passengers && booking.passengers.length > 0
+                            ? `${booking.passengers.length} Passenger${
+                                booking.passengers.length > 1 ? "s" : ""
+                              }`
+                            : `Seat ${booking.seatNumber}`}
                         </p>
                         <p className="text-secondary text-sm sm:text-base font-bold mt-0.5 capitalize">
                           {booking.travelClass}
+                          {booking.passengers &&
+                            booking.passengers.length > 0 && (
+                              <span className="text-[10px] ml-1">
+                                (
+                                {booking.passengers
+                                  .map((p) => p.seatNumber)
+                                  .join(", ")}
+                                )
+                              </span>
+                            )}
                         </p>
                       </div>
                       <p className="text-secondary text-lg sm:text-xl font-bold">
@@ -285,8 +301,19 @@ export default function TicketsTab() {
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">
                     Seat Number
+                    {selectedBooking.passengers &&
+                    selectedBooking.passengers.length > 1
+                      ? "s"
+                      : ""}
                   </p>
-                  <p className="font-semibold">{selectedBooking.seatNumber}</p>
+                  <p className="font-semibold">
+                    {selectedBooking.passengers &&
+                    selectedBooking.passengers.length > 0
+                      ? selectedBooking.passengers
+                          .map((p) => p.seatNumber)
+                          .join(", ")
+                      : selectedBooking.seatNumber}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Class</p>
@@ -311,20 +338,136 @@ export default function TicketsTab() {
                   </div>
                 )}
               </div>
-              {selectedBooking.status === "confirmed" && (
-                <DialogFooter>
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleCancelBooking(selectedBooking._id)}
-                  >
-                    Cancel Booking
-                  </Button>
-                </DialogFooter>
-              )}
+
+              {/* Passenger Details */}
+              {selectedBooking.passengers &&
+                selectedBooking.passengers.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="font-semibold mb-3">
+                      Passenger Details ({selectedBooking.passengers.length})
+                    </h4>
+                    <div className="space-y-3">
+                      {selectedBooking.passengers.map((passenger, index) => (
+                        <div
+                          key={index}
+                          className="p-4 rounded-lg border bg-muted/30"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <p className="font-semibold">
+                                {passenger.fullName}
+                                {passenger.isPrimary && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="ml-2 text-xs"
+                                  >
+                                    You
+                                  </Badge>
+                                )}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Seat {passenger.seatNumber} •{" "}
+                                {passenger.gender.charAt(0).toUpperCase() +
+                                  passenger.gender.slice(1)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                              <p className="text-muted-foreground">Document</p>
+                              <p className="font-medium">
+                                {passenger.documentType.toUpperCase()}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">
+                                Document No.
+                              </p>
+                              <p className="font-medium">
+                                {passenger.documentNumber}
+                              </p>
+                            </div>
+                            {passenger.email && (
+                              <div className="col-span-2">
+                                <p className="text-muted-foreground">Email</p>
+                                <p className="font-medium">{passenger.email}</p>
+                              </div>
+                            )}
+                            {passenger.phone && (
+                              <div className="col-span-2">
+                                <p className="text-muted-foreground">Phone</p>
+                                <p className="font-medium">{passenger.phone}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              {selectedBooking.status === "confirmed" &&
+                (() => {
+                  const departureDate = new Date(
+                    selectedBooking.flightId.departureTime
+                  );
+                  const now = new Date();
+                  const hoursUntilDeparture =
+                    (departureDate - now) / (1000 * 60 * 60);
+
+                  const canShowBoardingPass =
+                    hoursUntilDeparture <= 24 && hoursUntilDeparture > 0;
+                  const canCancel = hoursUntilDeparture > 24;
+                  const isPast = departureDate < now;
+
+                  return (
+                    <DialogFooter className="flex-col sm:flex-row gap-2">
+                      <Button
+                        variant="default"
+                        onClick={() => {
+                          if (isPast) {
+                            toast.error(
+                              "Boarding pass is not available for past flights"
+                            );
+                            return;
+                          }
+                          if (!canShowBoardingPass) {
+                            toast.info(
+                              "Boarding pass will be available 24 hours before departure"
+                            );
+                            return;
+                          }
+                          setShowDetails(false);
+                          setTimeout(() => setShowBoardingPass(true), 300);
+                        }}
+                        disabled={isPast}
+                      >
+                        <Ticket className="h-4 w-4 mr-2" />
+                        View Boarding Pass
+                      </Button>
+                      {canCancel && (
+                        <Button
+                          variant="destructive"
+                          onClick={() =>
+                            handleCancelBooking(selectedBooking._id)
+                          }
+                        >
+                          Cancel Booking
+                        </Button>
+                      )}
+                    </DialogFooter>
+                  );
+                })()}
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Boarding Pass Modal */}
+      <BoardingPassModal
+        isOpen={showBoardingPass}
+        onClose={() => setShowBoardingPass(false)}
+        booking={selectedBooking}
+      />
     </div>
   );
 }

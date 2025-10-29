@@ -9,10 +9,10 @@ const Home = lazy(() => import("@/pages/Home.jsx"));
 const SearchResults = lazy(() => import("@/pages/SearchResults.jsx"));
 const FlightDetails = lazy(() => import("@/pages/FlightDetails.jsx"));
 const SeatSelection = lazy(() => import("@/pages/SeatSelection.jsx"));
+const PassengerDetails = lazy(() => import("@/pages/PassengerDetails.jsx"));
 const BookingConfirmation = lazy(() =>
   import("@/pages/BookingConfirmation.jsx")
 );
-const BookingSuccess = lazy(() => import("@/pages/BookingSuccess.jsx"));
 const SignIn = lazy(() => import("@/pages/SignIn.jsx"));
 const SignUp = lazy(() => import("@/pages/SignUp.jsx"));
 const VerifyOTP = lazy(() => import("@/pages/VerifyOTP.jsx"));
@@ -58,21 +58,21 @@ const router = createBrowserRouter([
     ),
   },
   {
-    path: "/booking-confirmation/:id",
+    path: "/passenger-details/:id",
     element: (
       <RequireAuth>
         <Suspense fallback={<LoadingFallback />}>
-          <BookingConfirmation />
+          <PassengerDetails />
         </Suspense>
       </RequireAuth>
     ),
   },
   {
-    path: "/booking-success",
+    path: "/booking-confirmation/:id",
     element: (
       <RequireAuth>
         <Suspense fallback={<LoadingFallback />}>
-          <BookingSuccess />
+          <BookingConfirmation />
         </Suspense>
       </RequireAuth>
     ),
