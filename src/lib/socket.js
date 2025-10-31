@@ -119,6 +119,9 @@ export const subscribeSeatEvents = (handlers) => {
   if (handlers.onSeatExpired) {
     socket.on("seat-expired", handlers.onSeatExpired);
   }
+  if (handlers.onSeatCancelled) {
+    socket.on("seat-cancelled", handlers.onSeatCancelled);
+  }
   if (handlers.onSeatStatus) {
     socket.on("seat-status", handlers.onSeatStatus);
   }
@@ -134,5 +137,6 @@ export const unsubscribeSeatEvents = () => {
   socket.off("seat-unlocked");
   socket.off("seat-booked");
   socket.off("seat-expired");
+  socket.off("seat-cancelled");
   socket.off("seat-status");
 };
