@@ -1,8 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, Plane } from "lucide-react";
+import { ArrowLeft, Plane, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 import { searchFlights } from "@/lib/flights";
 import { toast } from "sonner";
 import useDocumentTitle from "@/hooks/useDocumentTitle";
@@ -168,6 +176,7 @@ export default function SearchResults() {
   const [loading, setLoading] = useState(true);
   const [flights, setFlights] = useState([]);
   const [error, setError] = useState("");
+  const [sortBy, setSortBy] = useState("price-low");
 
   const from = searchParams.get("from") || "";
   const to = searchParams.get("to") || "";
@@ -204,6 +213,56 @@ export default function SearchResults() {
       setLoading(false);
     }
   };
+
+  // Sort flights based on selected option
+  const sortedFlights = useMemo(() => {
+    const flightsCopy = [...flights];
+
+    switch (sortBy) {
+      case "price-low":
+        return flightsCopy.sort(
+          (a, b) => (a.baseFare || 0) - (b.baseFare || 0)
+        );
+      case "price-high":
+        return flightsCopy.sort(
+          (a, b) => (b.baseFare || 0) - (a.baseFare || 0)
+        );
+      case "duration-short":
+        return flightsCopy.sort((a, b) => {
+          const durationA = new Date(a.arrivalTime) - new Date(a.departureTime);
+          const durationB = new Date(b.arrivalTime) - new Date(b.departureTime);
+          return durationA - durationB;
+        });
+      case "duration-long":
+        return flightsCopy.sort((a, b) => {
+          const durationA = new Date(a.arrivalTime) - new Date(a.departureTime);
+          const durationB = new Date(b.arrivalTime) - new Date(b.departureTime);
+          return durationB - durationA;
+        });
+      case "departure-early":
+        return flightsCopy.sort(
+          (a, b) => new Date(a.departureTime) - new Date(b.departureTime)
+        );
+      case "departure-late":
+        return flightsCopy.sort(
+          (a, b) => new Date(b.departureTime) - new Date(a.departureTime)
+        );
+      default:
+        return flightsCopy;
+    }
+  }, [flights, sortBy]);
+
+  const sortOptions = [
+    { id: "price-low", label: "Price: Low to High" },
+    { id: "price-high", label: "Price: High to Low" },
+    { id: "duration-short", label: "Duration: Shortest" },
+    { id: "duration-long", label: "Duration: Longest" },
+    { id: "departure-early", label: "Departure: Earliest" },
+    { id: "departure-late", label: "Departure: Latest" },
+  ];
+
+  const currentSortLabel =
+    sortOptions.find((opt) => opt.id === sortBy)?.label || "Sort";
 
   const formattedDate = useMemo(() => {
     try {
@@ -299,14 +358,59 @@ export default function SearchResults() {
               animate={{ opacity: 1, y: 0 }}
               className="mb-6"
             >
-              <h2 className="text-2xl font-bold mb-2">Available Flights</h2>
-              <p className="text-muted-foreground">
-                {flights.length} flight{flights.length !== 1 ? "s" : ""} found
-              </p>
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Available Flights</h2>
+                  <p className="text-muted-foreground">
+                    {sortedFlights.length} flight
+                    {sortedFlights.length !== 1 ? "s" : ""} found
+                  </p>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="rounded-full">
+                      <ArrowUpDown className="h-4 w-4 mr-2" />
+                      {currentSortLabel}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setSortBy("price-low")}>
+                      Price: Low to High
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSortBy("price-high")}>
+                      Price: High to Low
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => setSortBy("duration-short")}
+                    >
+                      Duration: Shortest
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setSortBy("duration-long")}
+                    >
+                      Duration: Longest
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => setSortBy("departure-early")}
+                    >
+                      Departure: Earliest
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setSortBy("departure-late")}
+                    >
+                      Departure: Latest
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </motion.div>
 
             <div className="grid gap-6 max-w-2xl mx-auto">
-              {flights.map((flight, index) => (
+              {sortedFlights.map((flight, index) => (
                 <FlightCard
                   key={flight._id || index}
                   flight={flight}
