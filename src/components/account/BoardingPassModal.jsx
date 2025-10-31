@@ -202,13 +202,12 @@ export default function BoardingPassModal({ isOpen, onClose, booking }) {
                 </div>
               </div>
 
-              {/* Barcode */}
               <div
-                className="mt-6 h-16 rounded-2xl overflow-hidden"
+                className="mt-6 h-16 rounded-2xl overflow-x-auto overflow-y-hidden"
                 style={{ backgroundColor: "rgba(84, 20, 36, 0.1)" }}
               >
-                <div className="flex h-full items-end px-2">
-                  {Array.from({ length: 50 }).map((_, i) => (
+                <div className="flex h-full items-end px-2 w-max">
+                  {Array.from({ length: 60 }).map((_, i) => (
                     <div
                       key={i}
                       className="mr-1"
