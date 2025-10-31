@@ -225,6 +225,40 @@ export default function TicketsTab() {
                       </p>
                     </div>
 
+                    {/* Boarding pass indicator */}
+                    {(() => {
+                      const now = new Date();
+                      const hoursUntilDeparture =
+                        (departureDate - now) / (1000 * 60 * 60);
+                      const canShowBoardingPass =
+                        hoursUntilDeparture <= 24 &&
+                        hoursUntilDeparture > 0 &&
+                        booking.status === "confirmed";
+
+                      return (
+                        canShowBoardingPass && (
+                          <div className="mt-3 pt-3 border-t border-secondary/20">
+                            <div className="flex items-center justify-center gap-2">
+                              <svg
+                                className="w-4 h-4 text-green-500"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                              <span className="text-green-500 font-semibold text-xs">
+                                Boarding pass ready
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      );
+                    })()}
+
                     {/* Status badge at bottom */}
                     <div className="flex justify-center mt-2 pt-2 border-t border-secondary/20">
                       <Badge
@@ -421,29 +455,18 @@ export default function TicketsTab() {
 
                   return (
                     <DialogFooter className="flex-col sm:flex-row gap-2">
-                      <Button
-                        variant="default"
-                        onClick={() => {
-                          if (isPast) {
-                            toast.error(
-                              "Boarding pass is not available for past flights"
-                            );
-                            return;
-                          }
-                          if (!canShowBoardingPass) {
-                            toast.info(
-                              "Boarding pass will be available 24 hours before departure"
-                            );
-                            return;
-                          }
-                          setShowDetails(false);
-                          setTimeout(() => setShowBoardingPass(true), 300);
-                        }}
-                        disabled={isPast}
-                      >
-                        <Ticket className="h-4 w-4 mr-2" />
-                        View Boarding Pass
-                      </Button>
+                      {canShowBoardingPass && (
+                        <Button
+                          variant="default"
+                          onClick={() => {
+                            setShowDetails(false);
+                            setTimeout(() => setShowBoardingPass(true), 300);
+                          }}
+                        >
+                          <Ticket className="h-4 w-4 mr-2" />
+                          View Boarding Pass
+                        </Button>
+                      )}
                       {canCancel && (
                         <Button
                           variant="destructive"
