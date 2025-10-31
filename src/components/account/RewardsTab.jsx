@@ -53,11 +53,11 @@ export default function RewardsTab() {
       ) : (
         <>
           {/* Balance Card */}
-          <Card className="overflow-hidden border-0 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-primary to-primary/80">
-            <div className="p-6 sm:p-8 text-white">
+          <Card className="overflow-hidden border-0 rounded-4xl sm:rounded-4xl bg-primary">
+            <div className="p-6 sm:p-8 text-secondary">
               <div className="flex items-center gap-2 mb-2">
                 <Gift className="w-4 h-4 sm:w-5 sm:h-5" />
-                <p className="text-white/80 text-sm sm:text-base">
+                <p className="text-secondary/80 text-sm sm:text-base">
                   Available Balance
                 </p>
               </div>
@@ -66,7 +66,7 @@ export default function RewardsTab() {
               </p>
               <div className="grid grid-cols-3 gap-3 sm:gap-4">
                 <div>
-                  <p className="text-white/60 text-xs sm:text-sm mb-1">
+                  <p className="text-secondary/60 text-xs sm:text-sm mb-1">
                     Total Earned
                   </p>
                   <p className="text-lg sm:text-xl font-semibold">
@@ -74,7 +74,7 @@ export default function RewardsTab() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-white/60 text-xs sm:text-sm mb-1">
+                  <p className="text-secondary/60 text-xs sm:text-sm mb-1">
                     Total Redeemed
                   </p>
                   <p className="text-lg sm:text-xl font-semibold">
@@ -82,7 +82,7 @@ export default function RewardsTab() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-white/60 text-xs sm:text-sm mb-1">
+                  <p className="text-secondary/60 text-xs sm:text-sm mb-1">
                     Transactions
                   </p>
                   <p className="text-lg sm:text-xl font-semibold">

@@ -103,7 +103,7 @@ export default function Account() {
           transition={{ delay: 0.2 }}
         >
           {/* Profile Header Card */}
-          <Card className="mb-6 sm:mb-8 overflow-hidden border-0 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-primary to-primary/80">
+          <Card className="mb-6 sm:mb-8 overflow-hidden border-0 rounded-4xl sm:rounded-4xl bg-primary">
             <div className="p-4 sm:p-6 text-white">
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/20 border-2 border-white/30 flex items-center justify-center overflow-hidden flex-shrink-0">
