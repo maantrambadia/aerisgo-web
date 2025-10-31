@@ -12,10 +12,12 @@ import {
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 export function OTPForm({ className, ...props }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { login } = useAuth();
   const email = location.state?.email || "";
 
   const [otp, setOtp] = useState("");
@@ -38,8 +40,18 @@ export function OTPForm({ className, ...props }) {
         code: otp,
       });
 
-      toast.success(data.message || "Email verified successfully!");
-      navigate("/sign-in");
+      // Auto-login user with the token returned from verification
+      if (data.token && data.user) {
+        localStorage.setItem("aerisgo_token", data.token);
+        localStorage.setItem("aerisgo_user", JSON.stringify(data.user));
+        login(data.user);
+        toast.success("Email verified! Welcome to AerisGo!");
+        navigate("/", { replace: true });
+      } else {
+        // Fallback if no token (shouldn't happen)
+        toast.success(data.message || "Email verified successfully!");
+        navigate("/sign-in");
+      }
     } catch (error) {
       const message =
         error?.response?.data?.message || "Invalid verification code";
