@@ -10,7 +10,6 @@ import { PassengerSelector } from "@/components/PassengerSelector";
 import { parseCityName } from "@/lib/airports";
 import { toast } from "sonner";
 import {
-  Plane,
   MapPin,
   Calendar,
   Users,
@@ -20,7 +19,6 @@ import {
   CreditCard,
   Star,
   TrendingUp,
-  Globe,
   UserCircle,
   LogOut,
   LogIn,
@@ -89,17 +87,9 @@ export default function Home() {
   return (
     <div className="min-h-svh bg-gradient-to-b from-background to-muted/20">
       {/* Header */}
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="fixed top-0 left-0 right-0 z-50 pt-4 px-4 pointer-events-none"
-      >
+      <header className="fixed top-0 left-0 right-0 z-50 pt-4 px-4 pointer-events-none">
         <div className="container mx-auto max-w-7xl">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1, duration: 0.5 }}
+          <div
             className="bg-background/70 border border-border/40 rounded-full shadow-xl px-6 py-3 pointer-events-auto"
             style={{
               backdropFilter: "blur(20px)",
@@ -117,159 +107,108 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 {user ? (
                   <>
-                    <motion.span
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="text-sm text-muted-foreground hidden md:block mr-2"
-                    >
+                    <span className="text-sm text-muted-foreground hidden md:block mr-2">
                       {user.name}
-                    </motion.span>
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Link to="/account">
-                        <Button
-                          variant="outline"
-                          className="rounded-full h-9 px-3 sm:px-4"
-                        >
-                          <UserCircle className="w-4 h-4" />
-                          <span className="hidden sm:inline sm:ml-2">
-                            My Account
-                          </span>
-                        </Button>
-                      </Link>
-                    </motion.div>
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
+                    </span>
+                    <Link to="/account">
                       <Button
                         variant="outline"
-                        onClick={logout}
                         className="rounded-full h-9 px-3 sm:px-4"
                       >
-                        <LogOut className="w-4 h-4" />
+                        <UserCircle className="w-4 h-4" />
                         <span className="hidden sm:inline sm:ml-2">
-                          Sign out
+                          My Account
                         </span>
                       </Button>
-                    </motion.div>
+                    </Link>
+                    <Button
+                      variant="outline"
+                      onClick={logout}
+                      className="rounded-full h-9 px-3 sm:px-4"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span className="hidden sm:inline sm:ml-2">Sign out</span>
+                    </Button>
                   </>
                 ) : (
                   <>
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                    <Button
+                      variant="ghost"
+                      asChild
+                      className="rounded-full h-9 px-3 sm:px-4"
                     >
-                      <Button
-                        variant="ghost"
-                        asChild
-                        className="rounded-full h-9 px-3 sm:px-4"
-                      >
-                        <Link to="/sign-in">
-                          <LogIn className="w-4 h-4" />
-                          <span className="hidden sm:inline sm:ml-2">
-                            Sign in
-                          </span>
-                        </Link>
-                      </Button>
-                    </motion.div>
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Button asChild className="rounded-full h-9 px-3 sm:px-4">
-                        <Link to="/sign-up">
-                          <UserPlus className="w-4 h-4" />
-                          <span className="hidden sm:inline sm:ml-2">
-                            Sign up
-                          </span>
-                        </Link>
-                      </Button>
-                    </motion.div>
+                      <Link to="/sign-in">
+                        <LogIn className="w-4 h-4" />
+                        <span className="hidden sm:inline sm:ml-2">
+                          Sign in
+                        </span>
+                      </Link>
+                    </Button>
+                    <Button asChild className="rounded-full h-9 px-3 sm:px-4">
+                      <Link to="/sign-up">
+                        <UserPlus className="w-4 h-4" />
+                        <span className="hidden sm:inline sm:ml-2">
+                          Sign up
+                        </span>
+                      </Link>
+                    </Button>
                   </>
                 )}
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
-      </motion.header>
+      </header>
 
       {/* Hero Section */}
       <section className="relative overflow-hidden pt-20">
-        <motion.div className="container mx-auto px-4 py-12 md:py-16">
+        <div className="container mx-auto px-4 py-12 md:py-16">
           <div className="max-w-6xl mx-auto">
             {/* Hero Text */}
             <div className="text-center space-y-4 mb-10">
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.8 }}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium"
-              >
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
                 <TrendingUp className="h-4 w-4" />
                 <span>Trusted by 10,000+ travelers</span>
-              </motion.div>
+              </div>
 
-              <motion.h1
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3, duration: 0.8 }}
-                className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight"
-              >
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight">
                 Your Journey
                 <br />
                 <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                   Begins Here
                 </span>
-              </motion.h1>
+              </h1>
 
-              <motion.p
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.8 }}
-                className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto"
-              >
+              <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
                 Discover amazing destinations and book flights with ease. Your
                 next adventure is just a few clicks away.
-              </motion.p>
+              </p>
             </div>
 
             {/* Flight Search Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 0.8 }}
-              whileHover={{ y: -5 }}
-              className="bg-card border rounded-3xl p-6 md:p-8 shadow-2xl backdrop-blur-sm"
-            >
+            <div className="bg-card border rounded-3xl p-6 md:p-8 shadow-2xl backdrop-blur-sm">
               {/* Trip Type Selector */}
               <div className="flex gap-3 mb-6">
-                <motion.button
+                <button
                   onClick={() => setTripType("one-way")}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
                   className="px-6 py-2.5 rounded-full font-medium transition-all bg-primary text-primary-foreground shadow-md"
                 >
                   One Way
-                </motion.button>
-                <motion.button
+                </button>
+                <button
                   onClick={() => {
                     toast.info("Round Trip is currently not available");
                   }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
                   className="px-6 py-2.5 rounded-full font-medium transition-all bg-muted text-muted-foreground hover:bg-muted/80 opacity-60 cursor-not-allowed"
                   disabled
                 >
                   Round Trip
-                </motion.button>
+                </button>
               </div>
 
               {/* Search Form */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <motion.div whileHover={{ scale: 1.02 }} className="space-y-2">
+                <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
                     From
@@ -279,9 +218,9 @@ export default function Home() {
                     onValueChange={setFrom}
                     placeholder="Select departure city"
                   />
-                </motion.div>
+                </div>
 
-                <motion.div whileHover={{ scale: 1.02 }} className="space-y-2">
+                <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
                     To
@@ -291,9 +230,9 @@ export default function Home() {
                     onValueChange={setTo}
                     placeholder="Select arrival city"
                   />
-                </motion.div>
+                </div>
 
-                <motion.div whileHover={{ scale: 1.02 }} className="space-y-2">
+                <div className="space-y-2">
                   <Label htmlFor="date" className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
                     Date
@@ -306,9 +245,9 @@ export default function Home() {
                     min={new Date().toISOString().split("T")[0]}
                     className="h-12 rounded-2xl"
                   />
-                </motion.div>
+                </div>
 
-                <motion.div whileHover={{ scale: 1.02 }} className="space-y-2">
+                <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
                     Passengers
@@ -317,14 +256,10 @@ export default function Home() {
                     value={passengers}
                     onValueChange={setPassengers}
                   />
-                </motion.div>
+                </div>
               </div>
 
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="mt-6"
-              >
+              <div className="mt-6">
                 <Button
                   size="lg"
                   className="w-full h-12 text-base group rounded-full"
@@ -373,48 +308,12 @@ export default function Home() {
                   }}
                 >
                   Search Flights
-                  <motion.div
-                    animate={{ x: [0, 5, 0] }}
-                    transition={{ repeat: Infinity, duration: 1.5 }}
-                  >
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </motion.div>
+                  <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
-              </motion.div>
-            </motion.div>
+              </div>
+            </div>
           </div>
-        </motion.div>
-
-        {/* Floating Elements */}
-        <motion.div
-          animate={{
-            y: [0, -20, 0],
-            rotate: [0, 5, 0],
-          }}
-          transition={{
-            repeat: Infinity,
-            duration: 6,
-            ease: "easeInOut",
-          }}
-          className="absolute top-20 right-10 hidden lg:block"
-        >
-          <Plane className="h-16 w-16 text-primary/20" />
-        </motion.div>
-
-        <motion.div
-          animate={{
-            y: [0, 20, 0],
-            rotate: [0, -5, 0],
-          }}
-          transition={{
-            repeat: Infinity,
-            duration: 8,
-            ease: "easeInOut",
-          }}
-          className="absolute bottom-20 left-10 hidden lg:block"
-        >
-          <Globe className="h-20 w-20 text-primary/10" />
-        </motion.div>
+        </div>
       </section>
 
       {/* Features Section */}
@@ -437,13 +336,8 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((feature, index) => (
-              <motion.div
+              <div
                 key={feature.title}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1, duration: 0.6 }}
-                whileHover={{ y: -5 }}
                 className="bg-card border rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 group"
               >
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-primary/10 text-primary mb-4 transition-all duration-300 group-hover:bg-primary/20 group-hover:scale-110">
@@ -455,7 +349,7 @@ export default function Home() {
                 <p className="text-muted-foreground transition-colors duration-300">
                   {feature.description}
                 </p>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
@@ -481,13 +375,8 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {destinations.map((destination, index) => (
-              <motion.div
+              <div
                 key={destination.city}
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1, duration: 0.6 }}
-                whileHover={{ y: -5 }}
                 className="group relative overflow-hidden rounded-3xl border bg-card shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
               >
                 <div className="aspect-[4/3] relative overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
@@ -514,7 +403,7 @@ export default function Home() {
                     {destination.flights}
                   </p>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
@@ -537,23 +426,17 @@ export default function Home() {
               Join thousands of travelers who trust AerisGo for their flight
               bookings
             </p>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="inline-block"
+            <Button
+              size="lg"
+              variant="secondary"
+              className="h-14 px-8 text-lg rounded-full"
+              asChild
             >
-              <Button
-                size="lg"
-                variant="secondary"
-                className="h-14 px-8 text-lg rounded-full"
-                asChild
-              >
-                <Link to="/sign-up">
-                  Get Started
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-            </motion.div>
+              <Link to="/sign-up">
+                Get Started
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
           </motion.div>
         </div>
       </section>
