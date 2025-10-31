@@ -66,7 +66,7 @@ export default function Account() {
                 >
                   <Link to="/">
                     <Button
-                      variant="ghost"
+                      variant="default"
                       size="sm"
                       className="rounded-full h-9 px-3 sm:px-4"
                     >

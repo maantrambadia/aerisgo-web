@@ -87,9 +87,17 @@ export default function Home() {
   return (
     <div className="min-h-svh bg-gradient-to-b from-background to-muted/20">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 pt-4 px-4 pointer-events-none">
+      <motion.header
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="fixed top-0 left-0 right-0 z-50 pt-4 px-4 pointer-events-none"
+      >
         <div className="container mx-auto max-w-7xl">
-          <div
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1, duration: 0.5 }}
             className="bg-background/70 border border-border/40 rounded-full shadow-xl px-6 py-3 pointer-events-auto"
             style={{
               backdropFilter: "blur(20px)",
@@ -107,12 +115,9 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 {user ? (
                   <>
-                    <span className="text-sm text-muted-foreground hidden md:block mr-2">
-                      {user.name}
-                    </span>
                     <Link to="/account">
                       <Button
-                        variant="outline"
+                        variant="default"
                         className="rounded-full h-9 px-3 sm:px-4"
                       >
                         <UserCircle className="w-4 h-4" />
@@ -127,7 +132,7 @@ export default function Home() {
                       className="rounded-full h-9 px-3 sm:px-4"
                     >
                       <LogOut className="w-4 h-4" />
-                      <span className="hidden sm:inline sm:ml-2">Sign out</span>
+                      <span className="hidden sm:inline sm:ml-2">Sign Out</span>
                     </Button>
                   </>
                 ) : (
@@ -156,9 +161,9 @@ export default function Home() {
                 )}
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
-      </header>
+      </motion.header>
 
       {/* Hero Section */}
       <section className="relative overflow-hidden pt-20">
@@ -166,27 +171,47 @@ export default function Home() {
           <div className="max-w-6xl mx-auto">
             {/* Hero Text */}
             <div className="text-center space-y-4 mb-10">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium"
+              >
                 <TrendingUp className="h-4 w-4" />
                 <span>Trusted by 10,000+ travelers</span>
-              </div>
+              </motion.div>
 
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight">
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+                className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight"
+              >
                 Your Journey
                 <br />
                 <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                   Begins Here
                 </span>
-              </h1>
+              </motion.h1>
 
-              <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.5 }}
+                className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto"
+              >
                 Discover amazing destinations and book flights with ease. Your
                 next adventure is just a few clicks away.
-              </p>
+              </motion.p>
             </div>
 
             {/* Flight Search Card */}
-            <div className="bg-card border rounded-3xl p-6 md:p-8 shadow-2xl backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.6 }}
+              className="bg-card border rounded-3xl p-6 md:p-8 shadow-2xl backdrop-blur-sm"
+            >
               {/* Trip Type Selector */}
               <div className="flex gap-3 mb-6">
                 <button
@@ -311,7 +336,7 @@ export default function Home() {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
