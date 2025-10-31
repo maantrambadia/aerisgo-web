@@ -111,7 +111,7 @@ export default function Account() {
                     <img
                       src={getAvatarSrc()}
                       alt="Avatar"
-                      className="w-full h-full object-cover"
+                      className="w-[70px] h-full object-center mt-3"
                       draggable={false}
                     />
                   ) : (
