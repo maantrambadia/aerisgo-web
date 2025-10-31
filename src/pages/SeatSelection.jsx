@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -17,6 +17,8 @@ import useDocumentTitle from "@/hooks/useDocumentTitle";
 import LoadingFallback from "@/components/LoadingFallback";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import { getFlightSeats, lockSeat, unlockSeat } from "@/lib/seats";
+import { useSeatSocket } from "@/hooks/useSeatSocket";
 
 // Route pill component
 const RoutePill = ({ from, to }) => {
@@ -43,9 +45,17 @@ const RoutePill = ({ from, to }) => {
 };
 
 // Seat Button Component
-const SeatButton = ({ seat, selected, onPress, rowClass }) => {
+const SeatButton = ({
+  seat,
+  selected,
+  onPress,
+  rowClass,
+  isLocked,
+  isLockedByMe,
+}) => {
   const getSeatColor = () => {
-    if (selected) return "#541424"; // Primary - Selected
+    if (selected || isLockedByMe) return "#541424"; // Primary - Selected by me
+    if (isLocked) return "#f97316"; // Orange - Locked by someone else
     if (!seat.isAvailable) return "#dc2626"; // Red - Occupied
     if (seat.isExtraLegroom) return "#eab308"; // Yellow - Extra Legroom
     if (rowClass === "first") return "#a855f7"; // Purple - First Class
@@ -54,7 +64,8 @@ const SeatButton = ({ seat, selected, onPress, rowClass }) => {
   };
 
   const getBorderColor = () => {
-    if (selected) return "#6b1a2f";
+    if (selected || isLockedByMe) return "#6b1a2f";
+    if (isLocked) return "#ea580c";
     if (!seat.isAvailable) return "#991b1b";
     if (seat.isExtraLegroom) return "#ca8a04";
     if (rowClass === "first") return "#7c3aed";
@@ -65,6 +76,10 @@ const SeatButton = ({ seat, selected, onPress, rowClass }) => {
   const handleClick = () => {
     if (!seat.isAvailable) {
       toast.error("This seat is already booked");
+      return;
+    }
+    if (isLocked && !isLockedByMe) {
+      toast.error("This seat is being selected by another user");
       return;
     }
     onPress(seat);
@@ -83,9 +98,13 @@ const SeatButton = ({ seat, selected, onPress, rowClass }) => {
         cursor: seat.isAvailable ? "pointer" : "not-allowed",
       }}
       title={
-        seat.isAvailable
-          ? `${seat.seatNumber} - Available`
-          : `${seat.seatNumber} - Booked`
+        !seat.isAvailable
+          ? `${seat.seatNumber} - Booked`
+          : isLocked && !isLockedByMe
+          ? `${seat.seatNumber} - Locked by another user`
+          : isLockedByMe
+          ? `${seat.seatNumber} - Your selection`
+          : `${seat.seatNumber} - Available`
       }
     >
       <Armchair className="h-4 w-4" style={{ color: "#e3d7cb" }} />
@@ -109,6 +128,11 @@ export default function SeatSelection() {
   const [pricingConfig, setPricingConfig] = useState(null);
   const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [hasDocuments, setHasDocuments] = useState(false);
+  const [sessionId] = useState(
+    () => `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  );
+  const [lockedSeats, setLockedSeats] = useState(new Map()); // Map<seatNumber, {lockedBy, expiresAt}>
+  const userUnlockingRef = useRef(new Set()); // Track seats being unlocked by user
 
   // Get flight data from location state or sessionStorage
   const getFlightData = () => {
@@ -177,13 +201,25 @@ export default function SeatSelection() {
       }
 
       // Fetch seats
-      const seatsRes = await api.get(`/seats/flight/${flight._id}`);
+      const seatsRes = await getFlightSeats(flight._id);
 
       // Fetch pricing config
       const pricingRes = await api.get("/pricing/config");
 
-      setSeats(seatsRes.data.seats || []);
+      setSeats(seatsRes.seats || []);
       setPricingConfig(pricingRes.data.config);
+
+      // Initialize locked seats from server
+      const initialLocks = new Map();
+      (seatsRes.seats || []).forEach((seat) => {
+        if (seat.lockedBy && seat.lockExpiresAt) {
+          initialLocks.set(seat.seatNumber, {
+            lockedBy: seat.lockedBy,
+            expiresAt: new Date(seat.lockExpiresAt),
+          });
+        }
+      });
+      setLockedSeats(initialLocks);
       setLoading(false);
     } catch (err) {
       setLoading(false);
@@ -194,21 +230,141 @@ export default function SeatSelection() {
     }
   }
 
-  function handleSeatSelect(seat) {
+  // Socket.IO real-time event handlers
+  const socketHandlers = useMemo(
+    () => ({
+      onSeatLocked: (data) => {
+        if (data.flightId !== flight?._id) return;
+        setLockedSeats((prev) => {
+          const newLocks = new Map(prev);
+          newLocks.set(data.seatNumber, {
+            lockedBy: data.lockedBy,
+            expiresAt: new Date(data.lockExpiresAt),
+          });
+          return newLocks;
+        });
+      },
+      onSeatUnlocked: (data) => {
+        if (data.flightId !== flight?._id) return;
+        setLockedSeats((prev) => {
+          const newLocks = new Map(prev);
+          newLocks.delete(data.seatNumber);
+          return newLocks;
+        });
+        // Check if this was our selected seat
+        const wasSelected = selectedSeats.some(
+          (s) => s.seatNumber === data.seatNumber
+        );
+        if (wasSelected) {
+          setSelectedSeats((prev) =>
+            prev.filter((s) => s.seatNumber !== data.seatNumber)
+          );
+          // Only show message if we didn't unlock it ourselves
+          const wasUserInitiated = userUnlockingRef.current.has(
+            data.seatNumber
+          );
+          if (!wasUserInitiated) {
+            toast.warning(`Seat ${data.seatNumber} was released by admin`);
+          }
+        }
+      },
+      onSeatBooked: (data) => {
+        if (data.flightId !== flight?._id) return;
+        // Update seat availability
+        setSeats((prevSeats) =>
+          prevSeats.map((s) =>
+            s.seatNumber === data.seatNumber ? { ...s, isAvailable: false } : s
+          )
+        );
+        // Remove from locked seats
+        setLockedSeats((prev) => {
+          const newLocks = new Map(prev);
+          newLocks.delete(data.seatNumber);
+          return newLocks;
+        });
+      },
+      onSeatExpired: (data) => {
+        if (data.flightId !== flight?._id) return;
+        setLockedSeats((prev) => {
+          const newLocks = new Map(prev);
+          newLocks.delete(data.seatNumber);
+          return newLocks;
+        });
+        // Check if it was our seat
+        const wasOurSeat = selectedSeats.some(
+          (s) => s.seatNumber === data.seatNumber
+        );
+        if (wasOurSeat) {
+          toast.warning(
+            `Your selection for seat ${data.seatNumber} has expired`
+          );
+          setSelectedSeats((prev) =>
+            prev.filter((s) => s.seatNumber !== data.seatNumber)
+          );
+        }
+      },
+      onError: (error) => {
+        console.error("Socket error:", error);
+      },
+    }),
+    [flight?._id, selectedSeats]
+  );
+
+  // Initialize Socket.IO connection
+  useSeatSocket(flight?._id, socketHandlers);
+
+  async function handleSeatSelect(seat) {
     const isAlreadySelected = selectedSeats.some(
       (s) => s.seatNumber === seat.seatNumber
     );
 
     if (isAlreadySelected) {
-      setSelectedSeats(
-        selectedSeats.filter((s) => s.seatNumber !== seat.seatNumber)
-      );
+      // Unlock the seat
+      try {
+        // Mark this seat as being unlocked by user
+        userUnlockingRef.current.add(seat.seatNumber);
+
+        await unlockSeat({
+          flightId: flight._id,
+          seatNumber: seat.seatNumber,
+          sessionId,
+        });
+        setSelectedSeats(
+          selectedSeats.filter((s) => s.seatNumber !== seat.seatNumber)
+        );
+
+        // Remove from tracking after a short delay
+        setTimeout(() => {
+          userUnlockingRef.current.delete(seat.seatNumber);
+        }, 1000);
+      } catch (error) {
+        console.error("Failed to unlock seat:", error);
+        toast.error("Failed to deselect seat");
+      }
     } else {
       if (selectedSeats.length >= maxSeats) {
         toast.warning(`You can only select ${maxSeats} seat(s)`);
         return;
       }
-      setSelectedSeats([...selectedSeats, seat]);
+
+      // Lock the seat
+      try {
+        const previousSeat =
+          selectedSeats.length > 0 ? selectedSeats[0].seatNumber : undefined;
+        await lockSeat({
+          flightId: flight._id,
+          seatNumber: seat.seatNumber,
+          sessionId,
+          previousSeat,
+        });
+        setSelectedSeats([...selectedSeats, seat]);
+      } catch (error) {
+        console.error("Failed to lock seat:", error);
+        const message =
+          error.response?.data?.message ||
+          "Failed to select seat. It may be locked by another user.";
+        toast.error(message);
+      }
     }
   }
 
@@ -260,6 +416,21 @@ export default function SeatSelection() {
     if (rowNum <= 2) return "first";
     if (rowNum <= 7) return "business";
     return "economy";
+  };
+
+  // Helper to check if seat is locked
+  const getSeatLockStatus = (seatNumber) => {
+    const lock = lockedSeats.get(seatNumber);
+    if (!lock) return { isLocked: false, isLockedByMe: false };
+
+    const now = new Date();
+    if (lock.expiresAt < now) {
+      return { isLocked: false, isLockedByMe: false };
+    }
+
+    // Check if locked by current user (by checking if it's in selectedSeats)
+    const isLockedByMe = selectedSeats.some((s) => s.seatNumber === seatNumber);
+    return { isLocked: true, isLockedByMe };
   };
 
   // Calculate total price
@@ -475,6 +646,7 @@ export default function SeatSelection() {
                       {["F"].map((letter) => {
                         const seat = row[letter];
                         if (!seat) return <div key={letter} className="h-11" />;
+                        const lockStatus = getSeatLockStatus(seat.seatNumber);
                         return (
                           <SeatButton
                             key={letter}
@@ -484,6 +656,8 @@ export default function SeatSelection() {
                             )}
                             onPress={handleSeatSelect}
                             rowClass={rowClass}
+                            isLocked={lockStatus.isLocked}
+                            isLockedByMe={lockStatus.isLockedByMe}
                           />
                         );
                       })}
@@ -492,6 +666,7 @@ export default function SeatSelection() {
                       {["E"].map((letter) => {
                         const seat = row[letter];
                         if (!seat) return <div key={letter} className="h-11" />;
+                        const lockStatus = getSeatLockStatus(seat.seatNumber);
                         return (
                           <SeatButton
                             key={letter}
@@ -501,6 +676,8 @@ export default function SeatSelection() {
                             )}
                             onPress={handleSeatSelect}
                             rowClass={rowClass}
+                            isLocked={lockStatus.isLocked}
+                            isLockedByMe={lockStatus.isLockedByMe}
                           />
                         );
                       })}
@@ -509,6 +686,7 @@ export default function SeatSelection() {
                       {["D"].map((letter) => {
                         const seat = row[letter];
                         if (!seat) return <div key={letter} className="h-11" />;
+                        const lockStatus = getSeatLockStatus(seat.seatNumber);
                         return (
                           <SeatButton
                             key={letter}
@@ -518,6 +696,8 @@ export default function SeatSelection() {
                             )}
                             onPress={handleSeatSelect}
                             rowClass={rowClass}
+                            isLocked={lockStatus.isLocked}
+                            isLockedByMe={lockStatus.isLockedByMe}
                           />
                         );
                       })}
@@ -536,6 +716,7 @@ export default function SeatSelection() {
                       {["C"].map((letter) => {
                         const seat = row[letter];
                         if (!seat) return <div key={letter} className="h-11" />;
+                        const lockStatus = getSeatLockStatus(seat.seatNumber);
                         return (
                           <SeatButton
                             key={letter}
@@ -545,6 +726,8 @@ export default function SeatSelection() {
                             )}
                             onPress={handleSeatSelect}
                             rowClass={rowClass}
+                            isLocked={lockStatus.isLocked}
+                            isLockedByMe={lockStatus.isLockedByMe}
                           />
                         );
                       })}
@@ -553,6 +736,7 @@ export default function SeatSelection() {
                       {["B"].map((letter) => {
                         const seat = row[letter];
                         if (!seat) return <div key={letter} className="h-11" />;
+                        const lockStatus = getSeatLockStatus(seat.seatNumber);
                         return (
                           <SeatButton
                             key={letter}
@@ -562,6 +746,8 @@ export default function SeatSelection() {
                             )}
                             onPress={handleSeatSelect}
                             rowClass={rowClass}
+                            isLocked={lockStatus.isLocked}
+                            isLockedByMe={lockStatus.isLockedByMe}
                           />
                         );
                       })}
@@ -570,6 +756,7 @@ export default function SeatSelection() {
                       {["A"].map((letter) => {
                         const seat = row[letter];
                         if (!seat) return <div key={letter} className="h-11" />;
+                        const lockStatus = getSeatLockStatus(seat.seatNumber);
                         return (
                           <SeatButton
                             key={letter}
@@ -579,6 +766,8 @@ export default function SeatSelection() {
                             )}
                             onPress={handleSeatSelect}
                             rowClass={rowClass}
+                            isLocked={lockStatus.isLocked}
+                            isLockedByMe={lockStatus.isLockedByMe}
                           />
                         );
                       })}
