@@ -1,8 +1,10 @@
 import { motion } from "motion/react";
 import { OTPForm } from "@/components/OTPForm";
 import { Link } from "react-router";
+import useDocumentTitle from "@/hooks/useDocumentTitle";
 
 export default function VerifyOTP() {
+  useDocumentTitle("Verify OTP");
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
       <div className="flex flex-col gap-4 p-6 md:p-10">
