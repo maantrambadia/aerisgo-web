@@ -17,7 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 export function OTPForm({ className, ...props }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { refresh } = useAuth();
   const email = location.state?.email || "";
 
   const [otp, setOtp] = useState("");
@@ -44,7 +44,10 @@ export function OTPForm({ className, ...props }) {
       if (data.token && data.user) {
         localStorage.setItem("aerisgo_token", data.token);
         localStorage.setItem("aerisgo_user", JSON.stringify(data.user));
-        login(data.user);
+
+        // Refresh auth state to update user in context
+        await refresh();
+
         toast.success("Email verified! Welcome to AerisGo!");
         navigate("/", { replace: true });
       } else {

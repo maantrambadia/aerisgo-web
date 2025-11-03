@@ -19,6 +19,9 @@ const VerifyOTP = lazy(() => import("@/pages/VerifyOTP.jsx"));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPassword.jsx"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword.jsx"));
 const Account = lazy(() => import("@/pages/Account.jsx"));
+const CheckIn = lazy(() => import("@/pages/CheckIn.jsx"));
+const MealSelection = lazy(() => import("@/pages/MealSelection.jsx"));
+const BaggageSelection = lazy(() => import("@/pages/BaggageSelection.jsx"));
 
 const router = createBrowserRouter([
   {
@@ -83,6 +86,36 @@ const router = createBrowserRouter([
       <RequireAuth>
         <Suspense fallback={<LoadingFallback />}>
           <Account />
+        </Suspense>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/check-in/:id",
+    element: (
+      <RequireAuth>
+        <Suspense fallback={<LoadingFallback />}>
+          <CheckIn />
+        </Suspense>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/meal-selection/:id",
+    element: (
+      <RequireAuth>
+        <Suspense fallback={<LoadingFallback />}>
+          <MealSelection />
+        </Suspense>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/baggage-selection/:id",
+    element: (
+      <RequireAuth>
+        <Suspense fallback={<LoadingFallback />}>
+          <BaggageSelection />
         </Suspense>
       </RequireAuth>
     ),

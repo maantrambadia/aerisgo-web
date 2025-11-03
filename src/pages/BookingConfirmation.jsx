@@ -80,12 +80,29 @@ export default function BookingConfirmation() {
   };
 
   const bookingData = getBookingData();
-  const { flight, seats, from, to, date, passengers } = bookingData || {};
+  const {
+    flight,
+    outboundFlight,
+    returnFlight,
+    seats,
+    outboundSeats,
+    returnSeats,
+    from,
+    to,
+    date,
+    returnDate,
+    passengers,
+    tripType,
+  } = bookingData || {};
+
+  const isRoundTrip = tripType === "round-trip";
+  const displayFlight = outboundFlight || flight;
+  const displaySeats = outboundSeats || seats;
 
   useDocumentTitle("Confirm Booking");
 
   useEffect(() => {
-    if (!flight || !seats) {
+    if (!displayFlight || !displaySeats) {
       navigate("/");
       return;
     }
@@ -110,9 +127,7 @@ export default function BookingConfirmation() {
   }
 
   const pricing = useMemo(() => {
-    const baseFare = Number(flight?.baseFare || 0);
-
-    if (!pricingConfig || !seats || seats.length === 0) {
+    if (!pricingConfig || !displaySeats || displaySeats.length === 0) {
       return {
         subtotal: 0,
         extraLegroomTotal: 0,
@@ -129,10 +144,12 @@ export default function BookingConfirmation() {
     let totalAirportFee = 0;
     let extraLegroomTotal = 0;
 
-    seats.forEach((seat) => {
+    // Calculate outbound flight pricing
+    const outboundBaseFare = Number(displayFlight?.baseFare || 0);
+    displaySeats.forEach((seat) => {
       const classMultiplier =
         pricingConfig.travelClass[seat.travelClass]?.multiplier || 1;
-      const classPrice = baseFare * classMultiplier;
+      const classPrice = outboundBaseFare * classMultiplier;
       const extraLegroom = seat.isExtraLegroom
         ? pricingConfig.extraLegroom.charge
         : 0;
@@ -149,6 +166,30 @@ export default function BookingConfirmation() {
       extraLegroomTotal += extraLegroom;
     });
 
+    // Calculate return flight pricing if round-trip
+    if (isRoundTrip && returnFlight && returnSeats) {
+      const returnBaseFare = Number(returnFlight.baseFare || 0);
+      returnSeats.forEach((seat) => {
+        const classMultiplier =
+          pricingConfig.travelClass[seat.travelClass]?.multiplier || 1;
+        const classPrice = returnBaseFare * classMultiplier;
+        const extraLegroom = seat.isExtraLegroom
+          ? pricingConfig.extraLegroom.charge
+          : 0;
+        const seatSubtotal = classPrice + extraLegroom;
+
+        const gst = seatSubtotal * pricingConfig.taxes.gst;
+        const fuelSurcharge = seatSubtotal * pricingConfig.taxes.fuelSurcharge;
+        const airportFee = pricingConfig.taxes.airportFee;
+
+        subtotal += seatSubtotal;
+        totalGst += gst;
+        totalFuelSurcharge += fuelSurcharge;
+        totalAirportFee += airportFee;
+        extraLegroomTotal += extraLegroom;
+      });
+    }
+
     const total = subtotal + totalGst + totalFuelSurcharge + totalAirportFee;
 
     return {
@@ -159,7 +200,14 @@ export default function BookingConfirmation() {
       airportFee: Math.round(totalAirportFee * 100) / 100,
       total: Math.round(total * 100) / 100,
     };
-  }, [flight?.baseFare, seats, pricingConfig]);
+  }, [
+    displayFlight?.baseFare,
+    returnFlight?.baseFare,
+    displaySeats,
+    returnSeats,
+    pricingConfig,
+    isRoundTrip,
+  ]);
 
   const finalAmount = useMemo(() => {
     const rewardDiscount = rewardPointsToUse;
@@ -186,13 +234,20 @@ export default function BookingConfirmation() {
 
       // Create booking
       const bookingPayload = {
-        flightId: flight._id,
-        seatNumbers: seats.map((s) => s.seatNumber),
+        flightId: displayFlight._id,
+        seatNumbers: displaySeats.map((s) => s.seatNumber),
         totalAmount: finalAmount,
         paymentMethod: "card",
         rewardPointsUsed: rewardPointsToUse,
         passengers: passengers || [],
+        bookingType: isRoundTrip ? "round-trip" : "one-way",
       };
+
+      // Add return flight details for round-trip
+      if (isRoundTrip && returnFlight && returnSeats) {
+        bookingPayload.returnFlightId = returnFlight._id;
+        bookingPayload.returnSeatNumbers = returnSeats.map((s) => s.seatNumber);
+      }
 
       const res = await api.post("/bookings/create", bookingPayload);
 
@@ -202,8 +257,11 @@ export default function BookingConfirmation() {
       }
 
       // Clear sessionStorage
-      sessionStorage.removeItem(`booking_${flight._id}`);
-      sessionStorage.removeItem(`flight_${flight._id}`);
+      sessionStorage.removeItem(`booking_${displayFlight._id}`);
+      sessionStorage.removeItem(`flight_${displayFlight._id}`);
+      if (isRoundTrip && returnFlight) {
+        sessionStorage.removeItem(`flight_${returnFlight._id}`);
+      }
 
       setProcessing(false);
       setShowSuccess(true);
@@ -258,12 +316,16 @@ export default function BookingConfirmation() {
   };
 
   // Show loading fallback unless we're showing the success modal
-  if (loading || (!flight && !showSuccess) || (!seats && !showSuccess)) {
+  if (
+    loading ||
+    (!displayFlight && !showSuccess) ||
+    (!displaySeats && !showSuccess)
+  ) {
     return <LoadingFallback />;
   }
 
   // If showing success modal, don't render the main content
-  if (showSuccess && (!flight || !seats)) {
+  if (showSuccess && (!displayFlight || !displaySeats)) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
         {/* Success Modal */}
@@ -429,7 +491,7 @@ export default function BookingConfirmation() {
                   className="font-bold text-2xl mt-1"
                   style={{ color: "#e3d7cb" }}
                 >
-                  {formatTime(flight.departureTime)}
+                  {formatTime(displayFlight.departureTime)}
                 </p>
               </div>
 
@@ -484,7 +546,7 @@ export default function BookingConfirmation() {
                   className="font-bold text-2xl mt-1"
                   style={{ color: "#e3d7cb" }}
                 >
-                  {formatTime(flight.arrivalTime)}
+                  {formatTime(displayFlight.arrivalTime)}
                 </p>
               </div>
             </div>
@@ -494,7 +556,10 @@ export default function BookingConfirmation() {
               className="font-medium text-[11px] text-center mt-2"
               style={{ color: "rgba(227, 215, 203, 0.7)" }}
             >
-              {calculateDuration(flight.departureTime, flight.arrivalTime)}
+              {calculateDuration(
+                displayFlight.departureTime,
+                displayFlight.arrivalTime
+              )}
             </p>
 
             {/* Bottom brand/price bar */}
@@ -507,7 +572,7 @@ export default function BookingConfirmation() {
                   className="font-medium text-xs mt-0.5"
                   style={{ color: "rgba(227, 215, 203, 0.7)" }}
                 >
-                  {flight.flightNumber || "AG-101"}
+                  {displayFlight.flightNumber || "AG-101"}
                 </p>
               </div>
               <div className="text-right">
@@ -533,18 +598,173 @@ export default function BookingConfirmation() {
           <Notch side="right" />
         </motion.div>
 
-        {/* Selected Seats */}
+        {/* Return Flight Ticket Card */}
+        {isRoundTrip && returnFlight && returnSeats && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="relative mb-6"
+          >
+            <div className="mb-2 flex items-center gap-2">
+              <span
+                className="text-sm font-semibold"
+                style={{ color: "#541424" }}
+              >
+                Return Flight
+              </span>
+              <span
+                className="text-xs"
+                style={{ color: "rgba(84, 20, 36, 0.6)" }}
+              >
+                {new Date(returnDate).toLocaleDateString("en-US", {
+                  day: "numeric",
+                  month: "short",
+                })}
+              </span>
+            </div>
+            <div
+              className="rounded-[28px] p-5 overflow-hidden"
+              style={{ backgroundColor: "#541424" }}
+            >
+              {/* Top row times/cities + arc */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p
+                    className="font-semibold text-[11px]"
+                    style={{ color: "rgba(227, 215, 203, 0.9)" }}
+                  >
+                    {to}
+                  </p>
+                  <p
+                    className="font-bold text-2xl mt-1"
+                    style={{ color: "#e3d7cb" }}
+                  >
+                    {formatTime(returnFlight.departureTime)}
+                  </p>
+                </div>
+
+                {/* Arc with plane */}
+                <div
+                  style={{ width: "110px", alignItems: "center" }}
+                  className="flex flex-col"
+                >
+                  <div
+                    style={{
+                      width: "100px",
+                      height: "44px",
+                      overflow: "hidden",
+                      alignItems: "center",
+                      justifyContent: "flex-end",
+                      display: "flex",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "100px",
+                        height: "100px",
+                        borderRadius: "50px",
+                        borderWidth: "1px",
+                        borderStyle: "dashed",
+                        borderColor: "rgba(227, 215, 203, 0.45)",
+                      }}
+                    />
+                  </div>
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center -mt-6"
+                    style={{
+                      backgroundColor: "#541424",
+                      border: "1px solid rgba(227, 215, 203, 0.4)",
+                    }}
+                  >
+                    <Plane
+                      className="h-4 w-4 rotate-90"
+                      style={{ color: "#e3d7cb" }}
+                    />
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <p
+                    className="font-semibold text-[11px]"
+                    style={{ color: "rgba(227, 215, 203, 0.9)" }}
+                  >
+                    {from}
+                  </p>
+                  <p
+                    className="font-bold text-2xl mt-1"
+                    style={{ color: "#e3d7cb" }}
+                  >
+                    {formatTime(returnFlight.arrivalTime)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Duration */}
+              <p
+                className="font-medium text-[11px] text-center mt-2"
+                style={{ color: "rgba(227, 215, 203, 0.7)" }}
+              >
+                {calculateDuration(
+                  returnFlight.departureTime,
+                  returnFlight.arrivalTime
+                )}
+              </p>
+
+              {/* Bottom brand/price bar */}
+              <div className="flex items-center justify-between mt-4">
+                <div>
+                  <p
+                    className="font-bold text-2xl"
+                    style={{ color: "#e3d7cb" }}
+                  >
+                    AerisGo
+                  </p>
+                  <p
+                    className="font-medium text-xs mt-0.5"
+                    style={{ color: "rgba(227, 215, 203, 0.7)" }}
+                  >
+                    {returnFlight.flightNumber || "AG-102"}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p
+                    className="font-medium text-xs"
+                    style={{ color: "rgba(227, 215, 203, 0.7)" }}
+                  >
+                    {new Date(returnDate).toLocaleDateString()}
+                  </p>
+                  <p
+                    className="font-bold text-xl mt-0.5"
+                    style={{ color: "#e3d7cb" }}
+                  >
+                    ₹{" "}
+                    {returnFlight.baseFare
+                      ? returnFlight.baseFare.toLocaleString("en-IN")
+                      : "0"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Ticket notches */}
+            <Notch side="left" />
+            <Notch side="right" />
+          </motion.div>
+        )}
+
+        {/* Selected Seats - Outbound */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: isRoundTrip ? 0.35 : 0.3 }}
           className="mb-6"
         >
           <h3 className="font-bold text-base mb-3" style={{ color: "#541424" }}>
-            Selected Seats
+            {isRoundTrip ? "Outbound Flight Seats" : "Selected Seats"}
           </h3>
           <div className="flex flex-wrap gap-2">
-            {seats.map((seat, i) => (
+            {displaySeats.map((seat, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -582,15 +802,69 @@ export default function BookingConfirmation() {
           </div>
         </motion.div>
 
+        {/* Return Flight Seats */}
+        {isRoundTrip && returnSeats && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="mb-6"
+          >
+            <h3
+              className="font-bold text-base mb-3"
+              style={{ color: "#541424" }}
+            >
+              Return Flight Seats
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {returnSeats.map((seat, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.45 + i * 0.05 }}
+                  className="rounded-[16px] px-4 py-3 flex items-center gap-3 border"
+                  style={{
+                    backgroundColor: "rgba(227, 215, 203, 0.4)",
+                    borderColor: "rgba(84, 20, 36, 0.1)",
+                  }}
+                >
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ backgroundColor: getSeatColor(seat.travelClass) }}
+                  >
+                    <span className="text-white font-bold text-sm">
+                      {seat.seatNumber}
+                    </span>
+                  </div>
+                  <div>
+                    <p
+                      className="font-semibold text-sm capitalize"
+                      style={{ color: "#541424" }}
+                    >
+                      {seat.travelClass}
+                    </p>
+                    {seat.isExtraLegroom && (
+                      <p className="text-yellow-600 font-medium text-[10px]">
+                        Extra Legroom
+                      </p>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         {/* Price Summary */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: isRoundTrip ? 0.55 : 0.5 }}
           className="mb-32"
         >
           <h3 className="font-bold text-base mb-3" style={{ color: "#541424" }}>
-            Price Summary
+            Price Summary {isRoundTrip && "(Both Flights)"}
           </h3>
           <div
             className="rounded-[24px] p-5 border"
@@ -605,7 +879,15 @@ export default function BookingConfirmation() {
                 className="font-medium text-sm"
                 style={{ color: "rgba(84, 20, 36, 0.7)" }}
               >
-                Subtotal ({seats.length} seat{seats.length > 1 ? "s" : ""})
+                Subtotal (
+                {isRoundTrip && returnSeats
+                  ? `${displaySeats.length + returnSeats.length} seat${
+                      displaySeats.length + returnSeats.length > 1 ? "s" : ""
+                    }`
+                  : `${displaySeats.length} seat${
+                      displaySeats.length > 1 ? "s" : ""
+                    }`}
+                )
               </span>
               <span
                 className="font-semibold text-sm"

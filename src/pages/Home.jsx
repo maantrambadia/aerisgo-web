@@ -32,6 +32,7 @@ export default function Home() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [date, setDate] = useState("");
+  const [returnDate, setReturnDate] = useState("");
   const [passengers, setPassengers] = useState({ adults: 1, children: 0 });
 
   const features = [
@@ -138,7 +139,7 @@ export default function Home() {
                 ) : (
                   <>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       asChild
                       className="rounded-full h-9 px-3 sm:px-4"
                     >
@@ -215,24 +216,38 @@ export default function Home() {
               {/* Trip Type Selector */}
               <div className="flex gap-3 mb-6">
                 <button
-                  onClick={() => setTripType("one-way")}
-                  className="px-6 py-2.5 rounded-full font-medium transition-all bg-primary text-primary-foreground shadow-md"
+                  onClick={() => {
+                    setTripType("one-way");
+                    setReturnDate("");
+                  }}
+                  className={`px-6 py-2.5 rounded-full font-medium transition-all ${
+                    tripType === "one-way"
+                      ? "bg-primary text-primary-foreground shadow-md"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
                 >
                   One Way
                 </button>
                 <button
-                  onClick={() => {
-                    toast.info("Round Trip is currently not available");
-                  }}
-                  className="px-6 py-2.5 rounded-full font-medium transition-all bg-muted text-muted-foreground hover:bg-muted/80 opacity-60 cursor-not-allowed"
-                  disabled
+                  onClick={() => setTripType("round-trip")}
+                  className={`px-6 py-2.5 rounded-full font-medium transition-all ${
+                    tripType === "round-trip"
+                      ? "bg-primary text-primary-foreground shadow-md"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
                 >
                   Round Trip
                 </button>
               </div>
 
               {/* Search Form */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div
+                className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${
+                  tripType === "round-trip"
+                    ? "lg:grid-cols-5"
+                    : "lg:grid-cols-4"
+                }`}
+              >
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
@@ -260,7 +275,7 @@ export default function Home() {
                 <div className="space-y-2">
                   <Label htmlFor="date" className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
-                    Date
+                    {tripType === "round-trip" ? "Departure" : "Date"}
                   </Label>
                   <Input
                     id="date"
@@ -271,6 +286,26 @@ export default function Home() {
                     className="h-12 rounded-2xl"
                   />
                 </div>
+
+                {tripType === "round-trip" && (
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="returnDate"
+                      className="flex items-center gap-2"
+                    >
+                      <Calendar className="h-4 w-4" />
+                      Return
+                    </Label>
+                    <Input
+                      id="returnDate"
+                      type="date"
+                      value={returnDate}
+                      onChange={(e) => setReturnDate(e.target.value)}
+                      min={date || new Date().toISOString().split("T")[0]}
+                      className="h-12 rounded-2xl"
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
@@ -306,7 +341,7 @@ export default function Home() {
                     }
 
                     if (!date) {
-                      toast.error("Please select a travel date");
+                      toast.error("Please select a departure date");
                       return;
                     }
 
@@ -316,20 +351,39 @@ export default function Home() {
                     selectedDate.setHours(0, 0, 0, 0);
 
                     if (selectedDate < today) {
-                      toast.error("Travel date cannot be in the past");
+                      toast.error("Departure date cannot be in the past");
                       return;
+                    }
+
+                    // Validate return date for round-trip
+                    if (tripType === "round-trip") {
+                      if (!returnDate) {
+                        toast.error("Please select a return date");
+                        return;
+                      }
+
+                      const selectedReturnDate = new Date(returnDate);
+                      selectedReturnDate.setHours(0, 0, 0, 0);
+
+                      if (selectedReturnDate <= selectedDate) {
+                        toast.error("Return date must be after departure date");
+                        return;
+                      }
                     }
 
                     // Navigate to search results
                     const totalPassengers =
                       passengers.adults + passengers.children;
-                    navigate(
-                      `/search-results?from=${encodeURIComponent(
-                        sourceCity
-                      )}&to=${encodeURIComponent(
-                        destCity
-                      )}&date=${date}&passengers=${totalPassengers}`
-                    );
+                    const searchUrl = `/search-results?from=${encodeURIComponent(
+                      sourceCity
+                    )}&to=${encodeURIComponent(
+                      destCity
+                    )}&date=${date}&passengers=${totalPassengers}&tripType=${tripType}${
+                      tripType === "round-trip" && returnDate
+                        ? `&returnDate=${returnDate}`
+                        : ""
+                    }`;
+                    navigate(searchUrl);
                   }}
                 >
                   Search Flights

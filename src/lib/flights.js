@@ -6,15 +6,23 @@ export const searchFlights = async ({
   destination,
   date,
   passengers,
+  returnDate,
 }) => {
   try {
+    const params = {
+      source,
+      destination,
+      date,
+      passengers,
+    };
+
+    // Add returnDate if provided for round-trip
+    if (returnDate) {
+      params.returnDate = returnDate;
+    }
+
     const { data } = await api.get("/flights/search", {
-      params: {
-        source,
-        destination,
-        date,
-        passengers,
-      },
+      params,
     });
     return data;
   } catch (error) {

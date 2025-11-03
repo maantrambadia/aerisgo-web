@@ -26,16 +26,50 @@ export default function BoardingPassModal({ isOpen, onClose, booking }) {
 
   const getCityCode = (city) => {
     const codes = {
-      Rajkot: "RAJ",
+      // Popular airports
       Mumbai: "BOM",
       Delhi: "DEL",
       Bangalore: "BLR",
       Hyderabad: "HYD",
       Chennai: "MAA",
       Kolkata: "CCU",
-      Ahmedabad: "AMD",
       Pune: "PNQ",
+      Ahmedabad: "AMD",
+      // Other major cities
       Jaipur: "JAI",
+      Lucknow: "LKO",
+      Chandigarh: "IXC",
+      Bhopal: "BHO",
+      Patna: "PAT",
+      Thiruvananthapuram: "TRV",
+      Kochi: "COK",
+      Guwahati: "GAU",
+      Bhubaneswar: "BBI",
+      Ranchi: "IXR",
+      Raipur: "RPR",
+      Indore: "IDR",
+      Nagpur: "NAG",
+      Surat: "STV",
+      Vadodara: "BDQ",
+      Coimbatore: "CJB",
+      Visakhapatnam: "VTZ",
+      Vijayawada: "VGA",
+      Amritsar: "ATQ",
+      Varanasi: "VNS",
+      Agra: "AGR",
+      Goa: "GOI",
+      Srinagar: "SXR",
+      Jammu: "IXJ",
+      Dehradun: "DED",
+      Shimla: "SLV",
+      Imphal: "IMF",
+      Shillong: "SHL",
+      Aizawl: "AJL",
+      Dimapur: "DMU",
+      Agartala: "IXA",
+      Bagdogra: "IXB",
+      "Port Blair": "IXZ",
+      Rajkot: "RAJ",
     };
     return codes[city] || city.substring(0, 3).toUpperCase();
   };
@@ -196,7 +230,7 @@ export default function BoardingPassModal({ isOpen, onClose, booking }) {
                       className="text-base font-semibold mt-1"
                       style={{ color: "#541424" }}
                     >
-                      A{Math.floor(Math.random() * 20) + 1}
+                      {booking.boardingPass?.gate || flight.gate || "TBA"}
                     </p>
                   </div>
                 </div>
@@ -221,12 +255,12 @@ export default function BoardingPassModal({ isOpen, onClose, booking }) {
                 </div>
               </div>
 
-              {/* Booking ID */}
+              {/* PNR */}
               <p
                 className="text-center text-xs font-medium mt-3"
                 style={{ color: "rgba(84, 20, 36, 0.6)" }}
               >
-                Booking ID: {booking._id?.substring(0, 12).toUpperCase()}
+                PNR: {booking.pnr}
               </p>
             </div>
           </motion.div>

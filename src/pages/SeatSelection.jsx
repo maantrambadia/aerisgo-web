@@ -18,6 +18,7 @@ import LoadingFallback from "@/components/LoadingFallback";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { getFlightSeats, lockSeat, unlockSeat } from "@/lib/seats";
+import { getDynamicPrice } from "@/lib/pricing";
 import { useSeatSocket } from "@/hooks/useSeatSocket";
 
 // Route pill component
@@ -124,15 +125,27 @@ export default function SeatSelection() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [seats, setSeats] = useState([]);
+  const [returnSeats, setReturnSeats] = useState([]);
   const [selectedSeats, setSelectedSeats] = useState([]);
+  const [selectedReturnSeats, setSelectedReturnSeats] = useState([]);
+  const [showingReturnSeats, setShowingReturnSeats] = useState(false);
   const [pricingConfig, setPricingConfig] = useState(null);
   const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [hasDocuments, setHasDocuments] = useState(false);
   const [sessionId] = useState(
     () => `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
   );
-  const [lockedSeats, setLockedSeats] = useState(new Map()); // Map<seatNumber, {lockedBy, expiresAt}>
+  const [outboundLockedSeats, setOutboundLockedSeats] = useState(new Map()); // Map<seatNumber, {lockedBy, expiresAt}>
+  const [returnLockedSeats, setReturnLockedSeats] = useState(new Map()); // Map<seatNumber, {lockedBy, expiresAt}>
   const userUnlockingRef = useRef(new Set()); // Track seats being unlocked by user
+
+  // Get the appropriate locked seats map based on current view
+  const lockedSeats = showingReturnSeats
+    ? returnLockedSeats
+    : outboundLockedSeats;
+  const setLockedSeats = showingReturnSeats
+    ? setReturnLockedSeats
+    : setOutboundLockedSeats;
 
   // Get flight data from location state or sessionStorage
   const getFlightData = () => {
@@ -147,13 +160,26 @@ export default function SeatSelection() {
   };
 
   const flightData = getFlightData();
-  const { flight, from, to, date, passengers } = flightData || {};
+  const {
+    flight,
+    outboundFlight,
+    returnFlight,
+    from,
+    to,
+    date,
+    returnDate,
+    passengers,
+    tripType,
+  } = flightData || {};
+
+  const isRoundTrip = tripType === "round-trip";
+  const displayFlight = outboundFlight || flight;
   const maxSeats = parseInt(passengers || 1);
 
   useDocumentTitle("Select Seats");
 
   useEffect(() => {
-    if (!flight) {
+    if (!displayFlight) {
       navigate("/");
       return;
     }
@@ -182,7 +208,7 @@ export default function SeatSelection() {
       const bookingsRes = await api.get("/bookings/my-bookings");
       const existingBooking = bookingsRes.data?.items?.find(
         (booking) =>
-          booking.flightId?._id === flight._id &&
+          booking.flightId?._id === displayFlight._id &&
           (booking.status === "confirmed" || booking.status === "pending")
       );
 
@@ -200,26 +226,49 @@ export default function SeatSelection() {
         return;
       }
 
-      // Fetch seats
-      const seatsRes = await getFlightSeats(flight._id);
+      // Fetch seats for outbound flight
+      const seatsRes = await getFlightSeats(displayFlight._id);
+
+      // Fetch seats for return flight if round-trip
+      let returnSeatsRes = null;
+      if (isRoundTrip && returnFlight) {
+        returnSeatsRes = await getFlightSeats(returnFlight._id);
+      }
 
       // Fetch pricing config
       const pricingRes = await api.get("/pricing/config");
 
       setSeats(seatsRes.seats || []);
+      if (returnSeatsRes) {
+        setReturnSeats(returnSeatsRes.seats || []);
+      }
       setPricingConfig(pricingRes.data.config);
 
-      // Initialize locked seats from server
-      const initialLocks = new Map();
+      // Initialize locked seats from server for outbound
+      const initialOutboundLocks = new Map();
       (seatsRes.seats || []).forEach((seat) => {
         if (seat.lockedBy && seat.lockExpiresAt) {
-          initialLocks.set(seat.seatNumber, {
+          initialOutboundLocks.set(seat.seatNumber, {
             lockedBy: seat.lockedBy,
             expiresAt: new Date(seat.lockExpiresAt),
           });
         }
       });
-      setLockedSeats(initialLocks);
+      setOutboundLockedSeats(initialOutboundLocks);
+
+      // Initialize locked seats from server for return flight if round-trip
+      if (returnSeatsRes) {
+        const initialReturnLocks = new Map();
+        (returnSeatsRes.seats || []).forEach((seat) => {
+          if (seat.lockedBy && seat.lockExpiresAt) {
+            initialReturnLocks.set(seat.seatNumber, {
+              lockedBy: seat.lockedBy,
+              expiresAt: new Date(seat.lockExpiresAt),
+            });
+          }
+        });
+        setReturnLockedSeats(initialReturnLocks);
+      }
       setLoading(false);
     } catch (err) {
       setLoading(false);
@@ -234,7 +283,11 @@ export default function SeatSelection() {
   const socketHandlers = useMemo(
     () => ({
       onSeatLocked: (data) => {
-        if (data.flightId !== flight?._id) return;
+        const currentFlightId =
+          showingReturnSeats && returnFlight
+            ? returnFlight._id
+            : displayFlight?._id;
+        if (data.flightId !== currentFlightId) return;
         setLockedSeats((prev) => {
           const newLocks = new Map(prev);
           newLocks.set(data.seatNumber, {
@@ -245,20 +298,33 @@ export default function SeatSelection() {
         });
       },
       onSeatUnlocked: (data) => {
-        if (data.flightId !== flight?._id) return;
+        const currentFlightId =
+          showingReturnSeats && returnFlight
+            ? returnFlight._id
+            : displayFlight?._id;
+        if (data.flightId !== currentFlightId) return;
         setLockedSeats((prev) => {
           const newLocks = new Map(prev);
           newLocks.delete(data.seatNumber);
           return newLocks;
         });
         // Check if this was our selected seat
-        const wasSelected = selectedSeats.some(
+        const currentSeats = showingReturnSeats
+          ? selectedReturnSeats
+          : selectedSeats;
+        const wasSelected = currentSeats.some(
           (s) => s.seatNumber === data.seatNumber
         );
         if (wasSelected) {
-          setSelectedSeats((prev) =>
-            prev.filter((s) => s.seatNumber !== data.seatNumber)
-          );
+          if (showingReturnSeats) {
+            setSelectedReturnSeats((prev) =>
+              prev.filter((s) => s.seatNumber !== data.seatNumber)
+            );
+          } else {
+            setSelectedSeats((prev) =>
+              prev.filter((s) => s.seatNumber !== data.seatNumber)
+            );
+          }
           // Only show message if we didn't unlock it ourselves
           const wasUserInitiated = userUnlockingRef.current.has(
             data.seatNumber
@@ -269,13 +335,29 @@ export default function SeatSelection() {
         }
       },
       onSeatBooked: (data) => {
-        if (data.flightId !== flight?._id) return;
+        const currentFlightId =
+          showingReturnSeats && returnFlight
+            ? returnFlight._id
+            : displayFlight?._id;
+        if (data.flightId !== currentFlightId) return;
         // Update seat availability
-        setSeats((prevSeats) =>
-          prevSeats.map((s) =>
-            s.seatNumber === data.seatNumber ? { ...s, isAvailable: false } : s
-          )
-        );
+        if (showingReturnSeats) {
+          setReturnSeats((prevSeats) =>
+            prevSeats.map((s) =>
+              s.seatNumber === data.seatNumber
+                ? { ...s, isAvailable: false }
+                : s
+            )
+          );
+        } else {
+          setSeats((prevSeats) =>
+            prevSeats.map((s) =>
+              s.seatNumber === data.seatNumber
+                ? { ...s, isAvailable: false }
+                : s
+            )
+          );
+        }
         // Remove from locked seats
         setLockedSeats((prev) => {
           const newLocks = new Map(prev);
@@ -284,33 +366,58 @@ export default function SeatSelection() {
         });
       },
       onSeatExpired: (data) => {
-        if (data.flightId !== flight?._id) return;
+        const currentFlightId =
+          showingReturnSeats && returnFlight
+            ? returnFlight._id
+            : displayFlight?._id;
+        if (data.flightId !== currentFlightId) return;
         setLockedSeats((prev) => {
           const newLocks = new Map(prev);
           newLocks.delete(data.seatNumber);
           return newLocks;
         });
         // Check if it was our seat
-        const wasOurSeat = selectedSeats.some(
+        const currentSeats = showingReturnSeats
+          ? selectedReturnSeats
+          : selectedSeats;
+        const wasOurSeat = currentSeats.some(
           (s) => s.seatNumber === data.seatNumber
         );
         if (wasOurSeat) {
           toast.warning(
             `Your selection for seat ${data.seatNumber} has expired`
           );
-          setSelectedSeats((prev) =>
-            prev.filter((s) => s.seatNumber !== data.seatNumber)
-          );
+          if (showingReturnSeats) {
+            setSelectedReturnSeats((prev) =>
+              prev.filter((s) => s.seatNumber !== data.seatNumber)
+            );
+          } else {
+            setSelectedSeats((prev) =>
+              prev.filter((s) => s.seatNumber !== data.seatNumber)
+            );
+          }
         }
       },
       onSeatCancelled: (data) => {
-        if (data.flightId !== flight?._id) return;
+        const currentFlightId =
+          showingReturnSeats && returnFlight
+            ? returnFlight._id
+            : displayFlight?._id;
+        if (data.flightId !== currentFlightId) return;
         // Booking was cancelled, seat becomes available again
-        setSeats((prevSeats) =>
-          prevSeats.map((s) =>
-            s.seatNumber === data.seatNumber ? { ...s, isAvailable: true } : s
-          )
-        );
+        if (showingReturnSeats) {
+          setReturnSeats((prevSeats) =>
+            prevSeats.map((s) =>
+              s.seatNumber === data.seatNumber ? { ...s, isAvailable: true } : s
+            )
+          );
+        } else {
+          setSeats((prevSeats) =>
+            prevSeats.map((s) =>
+              s.seatNumber === data.seatNumber ? { ...s, isAvailable: true } : s
+            )
+          );
+        }
         // Remove from locked seats if it was locked
         setLockedSeats((prev) => {
           const newLocks = new Map(prev);
@@ -322,14 +429,32 @@ export default function SeatSelection() {
         console.error("Socket error:", error);
       },
     }),
-    [flight?._id, selectedSeats]
+    [
+      displayFlight?._id,
+      returnFlight?._id,
+      selectedSeats,
+      selectedReturnSeats,
+      showingReturnSeats,
+    ]
   );
 
-  // Initialize Socket.IO connection
-  useSeatSocket(flight?._id, socketHandlers);
+  // Initialize Socket.IO connection for current flight
+  const currentFlightId =
+    showingReturnSeats && returnFlight ? returnFlight._id : displayFlight?._id;
+  useSeatSocket(currentFlightId, socketHandlers);
 
   async function handleSeatSelect(seat) {
-    const isAlreadySelected = selectedSeats.some(
+    const currentSeats = showingReturnSeats
+      ? selectedReturnSeats
+      : selectedSeats;
+    const setCurrentSeats = showingReturnSeats
+      ? setSelectedReturnSeats
+      : setSelectedSeats;
+    const currentFlightId = showingReturnSeats
+      ? returnFlight._id
+      : displayFlight._id;
+
+    const isAlreadySelected = currentSeats.some(
       (s) => s.seatNumber === seat.seatNumber
     );
 
@@ -340,12 +465,12 @@ export default function SeatSelection() {
         userUnlockingRef.current.add(seat.seatNumber);
 
         await unlockSeat({
-          flightId: flight._id,
+          flightId: currentFlightId,
           seatNumber: seat.seatNumber,
           sessionId,
         });
-        setSelectedSeats(
-          selectedSeats.filter((s) => s.seatNumber !== seat.seatNumber)
+        setCurrentSeats(
+          currentSeats.filter((s) => s.seatNumber !== seat.seatNumber)
         );
 
         // Remove from tracking after a short delay
@@ -357,7 +482,7 @@ export default function SeatSelection() {
         toast.error("Failed to deselect seat");
       }
     } else {
-      if (selectedSeats.length >= maxSeats) {
+      if (currentSeats.length >= maxSeats) {
         toast.warning(`You can only select ${maxSeats} seat(s)`);
         return;
       }
@@ -365,14 +490,14 @@ export default function SeatSelection() {
       // Lock the seat
       try {
         const previousSeat =
-          selectedSeats.length > 0 ? selectedSeats[0].seatNumber : undefined;
+          currentSeats.length > 0 ? currentSeats[0].seatNumber : undefined;
         await lockSeat({
-          flightId: flight._id,
+          flightId: currentFlightId,
           seatNumber: seat.seatNumber,
           sessionId,
           previousSeat,
         });
-        setSelectedSeats([...selectedSeats, seat]);
+        setCurrentSeats([...currentSeats, seat]);
       } catch (error) {
         console.error("Failed to lock seat:", error);
         const message =
@@ -384,35 +509,93 @@ export default function SeatSelection() {
   }
 
   function handleContinue() {
+    // For round-trip, check if we're on outbound or return seat selection
+    if (isRoundTrip && !showingReturnSeats) {
+      // Validate outbound seats
+      if (selectedSeats.length === 0) {
+        toast.warning("Please select at least one seat for outbound flight");
+        return;
+      }
+      if (selectedSeats.length < maxSeats) {
+        toast.warning(`Please select ${maxSeats} seat(s) for outbound flight`);
+        return;
+      }
+
+      // Switch to return flight seat selection
+      setShowingReturnSeats(true);
+      toast.success("Outbound seats selected! Now select return flight seats.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    // Validate final selection
     if (selectedSeats.length === 0) {
       toast.warning("Please select at least one seat");
       return;
     }
-
     if (selectedSeats.length < maxSeats) {
       toast.warning(`Please select ${maxSeats} seat(s)`);
       return;
     }
 
-    // Store selection in sessionStorage and navigate to passenger details
-    sessionStorage.setItem(
-      `booking_${flight._id}`,
-      JSON.stringify({
-        flight,
-        seats: selectedSeats,
-        from,
-        to,
-        date,
-      })
-    );
+    // For round-trip, also validate return seats
+    if (isRoundTrip) {
+      if (selectedReturnSeats.length === 0) {
+        toast.warning("Please select at least one seat for return flight");
+        return;
+      }
+      if (selectedReturnSeats.length !== selectedSeats.length) {
+        toast.warning(
+          "Please select the same number of seats for both flights"
+        );
+        return;
+      }
+    }
 
-    navigate(`/passenger-details/${flight._id}`);
+    // Store selection in sessionStorage and navigate to passenger details
+    if (isRoundTrip) {
+      sessionStorage.setItem(
+        `booking_${displayFlight._id}`,
+        JSON.stringify({
+          outboundFlight: displayFlight,
+          returnFlight,
+          outboundSeats: selectedSeats,
+          returnSeats: selectedReturnSeats,
+          from,
+          to,
+          date,
+          returnDate,
+          passengers,
+          tripType: "round-trip",
+        })
+      );
+    } else {
+      sessionStorage.setItem(
+        `booking_${displayFlight._id}`,
+        JSON.stringify({
+          flight: displayFlight,
+          seats: selectedSeats,
+          from,
+          to,
+          date,
+          passengers,
+          tripType: "one-way",
+        })
+      );
+    }
+
+    navigate(`/passenger-details/${displayFlight._id}`);
   }
 
-  // Group seats by row
+  // Group seats by row (use current flight's seats)
+  const currentSeats = showingReturnSeats ? returnSeats : seats;
+  const currentSelectedSeats = showingReturnSeats
+    ? selectedReturnSeats
+    : selectedSeats;
+
   const seatsByRow = useMemo(() => {
     const rows = {};
-    seats.forEach((seat) => {
+    currentSeats.forEach((seat) => {
       const match = seat.seatNumber.match(/^(\d+)([A-F])$/);
       if (match) {
         const rowNum = parseInt(match[1]);
@@ -421,7 +604,7 @@ export default function SeatSelection() {
       }
     });
     return rows;
-  }, [seats]);
+  }, [currentSeats]);
 
   const rowNumbers = Object.keys(seatsByRow)
     .map(Number)
@@ -443,20 +626,104 @@ export default function SeatSelection() {
       return { isLocked: false, isLockedByMe: false };
     }
 
-    // Check if locked by current user (by checking if it's in selectedSeats)
-    const isLockedByMe = selectedSeats.some((s) => s.seatNumber === seatNumber);
+    // Check if locked by current user (by checking if it's in current selected seats)
+    const isLockedByMe = currentSelectedSeats.some(
+      (s) => s.seatNumber === seatNumber
+    );
     return { isLocked: true, isLockedByMe };
   };
 
-  // Calculate total price
+  // State for dynamic pricing
+  const [dynamicPricing, setDynamicPricing] = useState(null);
+  const [loadingPrice, setLoadingPrice] = useState(false);
+
+  // Fetch dynamic pricing when seat selection changes
+  useEffect(() => {
+    // Check if we have any seats selected
+    if (selectedSeats.length === 0 || !displayFlight?._id) {
+      setDynamicPricing(null);
+      return;
+    }
+
+    const fetchDynamicPricing = async () => {
+      try {
+        setLoadingPrice(true);
+        let totalDynamic = 0;
+
+        // Calculate outbound
+        for (const seat of selectedSeats) {
+          const seatType =
+            seat.seatNumber.includes("A") || seat.seatNumber.includes("F")
+              ? "window"
+              : seat.seatNumber.includes("C") || seat.seatNumber.includes("D")
+              ? "aisle"
+              : "middle";
+
+          const priceData = await getDynamicPrice(
+            displayFlight._id,
+            seat.travelClass,
+            seat.isExtraLegroom,
+            seatType
+          );
+
+          totalDynamic += priceData.pricing.total;
+        }
+
+        // Calculate return if round-trip
+        if (isRoundTrip && returnFlight && selectedReturnSeats.length > 0) {
+          for (const seat of selectedReturnSeats) {
+            const seatType =
+              seat.seatNumber.includes("A") || seat.seatNumber.includes("F")
+                ? "window"
+                : seat.seatNumber.includes("C") || seat.seatNumber.includes("D")
+                ? "aisle"
+                : "middle";
+
+            const priceData = await getDynamicPrice(
+              returnFlight._id,
+              seat.travelClass,
+              seat.isExtraLegroom,
+              seatType
+            );
+
+            totalDynamic += priceData.pricing.total;
+          }
+        }
+
+        setDynamicPricing({ total: totalDynamic });
+      } catch (error) {
+        console.error("Failed to fetch dynamic pricing:", error);
+        setDynamicPricing(null);
+      } finally {
+        setLoadingPrice(false);
+      }
+    };
+
+    fetchDynamicPricing();
+  }, [
+    selectedSeats,
+    selectedReturnSeats,
+    displayFlight?._id,
+    returnFlight?._id,
+    isRoundTrip,
+  ]);
+
+  // Calculate total price (use dynamic if available, fallback to static)
   const totalPrice = useMemo(() => {
+    if (dynamicPricing) {
+      return Math.round(dynamicPricing.total * 100) / 100;
+    }
+
+    // Fallback to static pricing
     if (!pricingConfig) return 0;
 
     let total = 0;
+
+    // Calculate outbound flight price
     selectedSeats.forEach((seat) => {
       const classMultiplier =
         pricingConfig.travelClass[seat.travelClass]?.multiplier || 1;
-      const classPrice = flight.baseFare * classMultiplier;
+      const classPrice = displayFlight.baseFare * classMultiplier;
       const extraLegroom = seat.isExtraLegroom
         ? pricingConfig.extraLegroom.charge
         : 0;
@@ -470,10 +737,38 @@ export default function SeatSelection() {
       total += subtotal + gst + fuelSurcharge + airportFee;
     });
 
-    return Math.round(total * 100) / 100;
-  }, [selectedSeats, pricingConfig, flight?.baseFare]);
+    // Calculate return flight price if round-trip
+    if (isRoundTrip && returnFlight) {
+      selectedReturnSeats.forEach((seat) => {
+        const classMultiplier =
+          pricingConfig.travelClass[seat.travelClass]?.multiplier || 1;
+        const classPrice = returnFlight.baseFare * classMultiplier;
+        const extraLegroom = seat.isExtraLegroom
+          ? pricingConfig.extraLegroom.charge
+          : 0;
+        const subtotal = classPrice + extraLegroom;
 
-  if (loading || !flight) {
+        // Add taxes
+        const gst = subtotal * pricingConfig.taxes.gst;
+        const fuelSurcharge = subtotal * pricingConfig.taxes.fuelSurcharge;
+        const airportFee = pricingConfig.taxes.airportFee;
+
+        total += subtotal + gst + fuelSurcharge + airportFee;
+      });
+    }
+
+    return Math.round(total * 100) / 100;
+  }, [
+    selectedSeats,
+    selectedReturnSeats,
+    pricingConfig,
+    displayFlight?.baseFare,
+    returnFlight?.baseFare,
+    isRoundTrip,
+    dynamicPricing,
+  ]);
+
+  if (loading || !displayFlight) {
     return <LoadingFallback />;
   }
 
@@ -515,14 +810,26 @@ export default function SeatSelection() {
               className="text-3xl font-bold leading-9"
               style={{ color: "#541424" }}
             >
-              Choose
+              {isRoundTrip && showingReturnSeats
+                ? "Return"
+                : isRoundTrip
+                ? "Outbound"
+                : "Choose"}
             </h2>
             <h2
               className="text-3xl font-bold leading-9 -mt-1"
               style={{ color: "#541424" }}
             >
-              Your Seat
+              {isRoundTrip ? "Seats" : "Your Seat"}
             </h2>
+            {isRoundTrip && (
+              <p
+                className="text-sm mt-1"
+                style={{ color: "rgba(84, 20, 36, 0.6)" }}
+              >
+                {showingReturnSeats ? `${to} → ${from}` : `${from} → ${to}`}
+              </p>
+            )}
           </div>
           <RoutePill from={from} to={to} />
         </motion.div>
@@ -543,10 +850,14 @@ export default function SeatSelection() {
               className="font-medium text-sm"
               style={{ color: "rgba(84, 20, 36, 0.7)" }}
             >
-              Selected
+              {isRoundTrip && showingReturnSeats
+                ? "Return Seats"
+                : isRoundTrip
+                ? "Outbound Seats"
+                : "Selected"}
             </span>
             <span className="font-bold text-lg" style={{ color: "#541424" }}>
-              {selectedSeats.length} / {maxSeats}
+              {currentSelectedSeats.length} / {maxSeats}
             </span>
           </div>
         </motion.div>
@@ -666,7 +977,7 @@ export default function SeatSelection() {
                           <SeatButton
                             key={letter}
                             seat={seat}
-                            selected={selectedSeats.some(
+                            selected={currentSelectedSeats.some(
                               (s) => s.seatNumber === seat.seatNumber
                             )}
                             onPress={handleSeatSelect}
@@ -686,7 +997,7 @@ export default function SeatSelection() {
                           <SeatButton
                             key={letter}
                             seat={seat}
-                            selected={selectedSeats.some(
+                            selected={currentSelectedSeats.some(
                               (s) => s.seatNumber === seat.seatNumber
                             )}
                             onPress={handleSeatSelect}
@@ -706,7 +1017,7 @@ export default function SeatSelection() {
                           <SeatButton
                             key={letter}
                             seat={seat}
-                            selected={selectedSeats.some(
+                            selected={currentSelectedSeats.some(
                               (s) => s.seatNumber === seat.seatNumber
                             )}
                             onPress={handleSeatSelect}
@@ -736,7 +1047,7 @@ export default function SeatSelection() {
                           <SeatButton
                             key={letter}
                             seat={seat}
-                            selected={selectedSeats.some(
+                            selected={currentSelectedSeats.some(
                               (s) => s.seatNumber === seat.seatNumber
                             )}
                             onPress={handleSeatSelect}
@@ -756,7 +1067,7 @@ export default function SeatSelection() {
                           <SeatButton
                             key={letter}
                             seat={seat}
-                            selected={selectedSeats.some(
+                            selected={currentSelectedSeats.some(
                               (s) => s.seatNumber === seat.seatNumber
                             )}
                             onPress={handleSeatSelect}
@@ -776,7 +1087,7 @@ export default function SeatSelection() {
                           <SeatButton
                             key={letter}
                             seat={seat}
-                            selected={selectedSeats.some(
+                            selected={currentSelectedSeats.some(
                               (s) => s.seatNumber === seat.seatNumber
                             )}
                             onPress={handleSeatSelect}
@@ -874,25 +1185,75 @@ export default function SeatSelection() {
             }}
           >
             <div className="flex items-center justify-between">
-              <span
-                className="font-medium text-sm"
-                style={{ color: "rgba(84, 20, 36, 0.7)" }}
-              >
-                Total Fare
-              </span>
-              <span className="font-bold text-xl" style={{ color: "#541424" }}>
-                ₹ {totalPrice.toLocaleString("en-IN")}
-              </span>
+              <div className="flex items-center gap-2">
+                <span
+                  className="font-medium text-sm"
+                  style={{ color: "rgba(84, 20, 36, 0.7)" }}
+                >
+                  {isRoundTrip ? "Total Fare (Both Flights)" : "Total Fare"}
+                </span>
+                {dynamicPricing && (
+                  <Badge
+                    variant="secondary"
+                    className="text-[10px] font-semibold"
+                    style={{
+                      backgroundColor: "rgba(84, 20, 36, 0.1)",
+                      color: "#541424",
+                    }}
+                  >
+                    LIVE
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {loadingPrice && (
+                  <span
+                    className="text-xs font-medium"
+                    style={{ color: "rgba(84, 20, 36, 0.4)" }}
+                  >
+                    Updating...
+                  </span>
+                )}
+                <span
+                  className="font-bold text-xl"
+                  style={{ color: "#541424" }}
+                >
+                  ₹ {totalPrice.toLocaleString("en-IN")}
+                </span>
+              </div>
             </div>
+            {dynamicPricing && (
+              <p
+                className="text-[10px] mt-1"
+                style={{ color: "rgba(84, 20, 36, 0.5)" }}
+              >
+                Price includes demand & time-based adjustments
+              </p>
+            )}
           </div>
           <Button
             size="lg"
             className="w-full h-12 text-base rounded-full"
             onClick={handleContinue}
-            disabled={selectedSeats.length === 0}
+            disabled={currentSelectedSeats.length === 0}
           >
-            Continue to Passenger Details
+            {isRoundTrip && !showingReturnSeats
+              ? "Continue to Return Flight"
+              : "Continue to Passenger Details"}
           </Button>
+          {isRoundTrip && showingReturnSeats && (
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full h-12 text-base rounded-full mt-3"
+              onClick={() => {
+                setShowingReturnSeats(false);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            >
+              Back to Outbound Flight
+            </Button>
+          )}
         </motion.div>
       </div>
 

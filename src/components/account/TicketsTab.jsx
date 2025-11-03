@@ -16,14 +16,18 @@ import { toast } from "sonner";
 import { getMyBookings, cancelBooking } from "@/lib/bookings";
 import { Plane, Ticket, Calendar, MapPin, ChevronRight } from "lucide-react";
 import BoardingPassModal from "./BoardingPassModal";
+import CancellationDialog from "./CancellationDialog";
+import { useNavigate } from "react-router";
 
 export default function TicketsTab() {
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("upcoming");
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showBoardingPass, setShowBoardingPass] = useState(false);
+  const [showCancellation, setShowCancellation] = useState(false);
 
   useEffect(() => {
     loadBookings();
@@ -41,35 +45,83 @@ export default function TicketsTab() {
     }
   };
 
-  const handleCancelBooking = async (bookingId) => {
-    if (!confirm("Are you sure you want to cancel this booking?")) return;
-
-    try {
-      await cancelBooking(bookingId);
-      toast.success("Booking cancelled successfully");
-      setShowDetails(false);
-      loadBookings();
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to cancel booking");
-    }
+  const handleCancelClick = () => {
+    setShowDetails(false);
+    setTimeout(() => setShowCancellation(true), 300);
   };
+
+  const handleCancellationSuccess = () => {
+    loadBookings();
+  };
+
+  // Process bookings to group round-trip bookings
+  const processedBookings = useMemo(() => {
+    const seen = new Set();
+    const grouped = [];
+
+    bookings.forEach((booking) => {
+      // Skip if already processed as part of a round-trip
+      if (seen.has(booking._id)) return;
+
+      // Check if this is part of a round-trip
+      if (booking.bookingType === "round-trip" && booking.linkedBookingId) {
+        // Find the linked booking
+        const linkedBooking = bookings.find(
+          (b) => b._id === booking.linkedBookingId
+        );
+
+        if (linkedBooking) {
+          // Determine which is outbound and which is return based on departure time
+          const isOutbound =
+            new Date(booking.flightId.departureTime) <
+            new Date(linkedBooking.flightId.departureTime);
+
+          grouped.push({
+            ...booking,
+            isRoundTrip: true,
+            outboundBooking: isOutbound ? booking : linkedBooking,
+            returnBooking: isOutbound ? linkedBooking : booking,
+          });
+
+          // Mark both as seen
+          seen.add(booking._id);
+          seen.add(linkedBooking._id);
+        } else {
+          // Linked booking not found, treat as regular
+          grouped.push(booking);
+          seen.add(booking._id);
+        }
+      } else {
+        // Regular one-way booking
+        grouped.push(booking);
+        seen.add(booking._id);
+      }
+    });
+
+    return grouped;
+  }, [bookings]);
 
   const filteredBookings = useMemo(() => {
     const now = new Date();
-    return bookings.filter((booking) => {
+    return processedBookings.filter((booking) => {
+      // For round-trip, use outbound flight for filtering
+      const flightToCheck = booking.isRoundTrip
+        ? booking.outboundBooking.flightId
+        : booking.flightId;
+
       if (filter === "cancelled") return booking.status === "cancelled";
       if (filter === "past") {
         return (
-          new Date(booking.flightId.departureTime) < now &&
+          new Date(flightToCheck.departureTime) < now &&
           booking.status !== "cancelled"
         );
       }
       return (
-        new Date(booking.flightId.departureTime) >= now &&
+        new Date(flightToCheck.departureTime) >= now &&
         booking.status === "confirmed"
       );
     });
-  }, [bookings, filter]);
+  }, [processedBookings, filter]);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-IN", {
@@ -124,8 +176,12 @@ export default function TicketsTab() {
       ) : (
         <div className="grid gap-4 max-w-2xl mx-auto">
           {filteredBookings.map((booking) => {
-            const departureDate = new Date(booking.flightId.departureTime);
-            const arrivalDate = new Date(booking.flightId.arrivalTime);
+            // Use outbound flight for display if round-trip
+            const displayFlight = booking.isRoundTrip
+              ? booking.outboundBooking.flightId
+              : booking.flightId;
+            const departureDate = new Date(displayFlight.departureTime);
+            const arrivalDate = new Date(displayFlight.arrivalTime);
             const duration = Math.round((arrivalDate - departureDate) / 60000);
             const hours = Math.floor(duration / 60);
             const minutes = duration % 60;
@@ -146,6 +202,21 @@ export default function TicketsTab() {
                     setShowDetails(true);
                   }}
                 >
+                  {/* Round Trip Badge */}
+                  {booking.isRoundTrip && (
+                    <div className="absolute top-2 right-2 z-20">
+                      <Badge
+                        className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+                        style={{
+                          backgroundColor: "rgba(34, 197, 94, 0.2)",
+                          color: "#16a34a",
+                          border: "1px solid rgba(34, 197, 94, 0.3)",
+                        }}
+                      >
+                        ⇄ ROUND TRIP
+                      </Badge>
+                    </div>
+                  )}
                   {/* Notches */}
                   <div className="absolute w-4 h-4 rounded-full bg-background border border-secondary/30 -left-2 top-1/2 -translate-y-1/2 z-10" />
                   <div className="absolute w-4 h-4 rounded-full bg-background border border-secondary/30 -right-2 top-1/2 -translate-y-1/2 z-10" />
@@ -155,10 +226,10 @@ export default function TicketsTab() {
                     <div className="flex items-center justify-between mb-1">
                       <div>
                         <p className="text-secondary/80 text-[10px] font-medium">
-                          {booking.flightId.source}
+                          {displayFlight.source}
                         </p>
                         <p className="text-secondary text-xl sm:text-2xl font-bold mt-0.5">
-                          {formatTime(booking.flightId.departureTime)}
+                          {formatTime(displayFlight.departureTime)}
                         </p>
                       </div>
 
@@ -182,10 +253,10 @@ export default function TicketsTab() {
 
                       <div className="text-right">
                         <p className="text-secondary/80 text-[10px] font-medium">
-                          {booking.flightId.destination}
+                          {displayFlight.destination}
                         </p>
                         <p className="text-secondary text-xl sm:text-2xl font-bold mt-0.5">
-                          {formatTime(booking.flightId.arrivalTime)}
+                          {formatTime(displayFlight.arrivalTime)}
                         </p>
                       </div>
                     </div>
@@ -199,12 +270,13 @@ export default function TicketsTab() {
                     <div className="flex items-center justify-between pt-2 border-t border-secondary/20">
                       <div>
                         <p className="text-secondary/70 text-[10px]">
-                          {booking.flightId.flightNumber} •{" "}
+                          {displayFlight.flightNumber} •{" "}
                           {booking.passengers && booking.passengers.length > 0
                             ? `${booking.passengers.length} Passenger${
                                 booking.passengers.length > 1 ? "s" : ""
                               }`
                             : `Seat ${booking.seatNumber}`}
+                          {booking.isRoundTrip && " • Round Trip"}
                         </p>
                         <p className="text-secondary text-sm sm:text-base font-bold mt-0.5 capitalize">
                           {booking.travelClass}
@@ -230,32 +302,80 @@ export default function TicketsTab() {
                       const now = new Date();
                       const hoursUntilDeparture =
                         (departureDate - now) / (1000 * 60 * 60);
+
+                      // Check-in opens 24h before, closes 1h before
+                      const checkInOpen =
+                        hoursUntilDeparture <= 24 && hoursUntilDeparture > 1;
                       const canShowBoardingPass =
-                        hoursUntilDeparture <= 24 &&
-                        hoursUntilDeparture > 0 &&
-                        booking.status === "confirmed";
+                        booking.isCheckedIn &&
+                        booking.status === "confirmed" &&
+                        hoursUntilDeparture > 0;
 
                       return (
-                        canShowBoardingPass && (
-                          <div className="mt-3 pt-3 border-t border-secondary/20">
-                            <div className="flex items-center justify-center gap-2">
-                              <svg
-                                className="w-4 h-4 text-green-500"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path
-                                  fillRule="evenodd"
-                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
-                              <span className="text-green-500 font-semibold text-xs">
-                                Boarding pass ready
-                              </span>
+                        <>
+                          {/* Check-in Status */}
+                          {checkInOpen &&
+                            !booking.isCheckedIn &&
+                            booking.status === "confirmed" && (
+                              <div className="mt-3 pt-3 border-t border-secondary/20">
+                                <div className="flex items-center justify-center gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20">
+                                  <svg
+                                    className="h-5 w-5 text-blue-600 dark:text-blue-400"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                  </svg>
+                                  <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                                    Check-in is now open! Complete check-in to
+                                    get your boarding pass.
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+
+                          {/* Boarding Pass Available */}
+                          {canShowBoardingPass && (
+                            <div className="mt-3 pt-3 border-t border-secondary/20">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <svg
+                                    className="w-4 h-4 text-green-500"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                  <span className="text-green-500 font-semibold text-xs">
+                                    Boarding pass ready
+                                  </span>
+                                </div>
+                                {(booking.boardingPass?.gate ||
+                                  booking.flightId?.gate) && (
+                                  <div className="flex items-center gap-1 px-2 py-1 rounded bg-secondary/20">
+                                    <span className="text-secondary/70 text-[10px]">
+                                      Gate:
+                                    </span>
+                                    <span className="text-secondary font-bold text-sm">
+                                      {booking.boardingPass?.gate ||
+                                        booking.flightId?.gate}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )
+                          )}
+                        </>
                       );
                     })()}
 
@@ -448,13 +568,30 @@ export default function TicketsTab() {
                   const hoursUntilDeparture =
                     (departureDate - now) / (1000 * 60 * 60);
 
+                  const checkInOpen =
+                    hoursUntilDeparture <= 24 && hoursUntilDeparture > 1;
                   const canShowBoardingPass =
-                    hoursUntilDeparture <= 24 && hoursUntilDeparture > 0;
-                  const canCancel = hoursUntilDeparture > 24;
+                    selectedBooking.isCheckedIn && hoursUntilDeparture > 0;
+                  const canCancel =
+                    hoursUntilDeparture > 24 && !selectedBooking.isCheckedIn;
                   const isPast = departureDate < now;
 
                   return (
                     <DialogFooter className="flex-col sm:flex-row gap-2">
+                      {/* Check-in Button */}
+                      {checkInOpen && !selectedBooking.isCheckedIn && (
+                        <Button
+                          variant="default"
+                          onClick={() => {
+                            navigate(`/check-in/${selectedBooking._id}`);
+                          }}
+                        >
+                          <Plane className="h-4 w-4 mr-2" />
+                          Check-in Now
+                        </Button>
+                      )}
+
+                      {/* Boarding Pass Button */}
                       {canShowBoardingPass && (
                         <Button
                           variant="default"
@@ -470,9 +607,7 @@ export default function TicketsTab() {
                       {canCancel && (
                         <Button
                           variant="destructive"
-                          onClick={() =>
-                            handleCancelBooking(selectedBooking._id)
-                          }
+                          onClick={handleCancelClick}
                         >
                           Cancel Booking
                         </Button>
@@ -490,6 +625,14 @@ export default function TicketsTab() {
         isOpen={showBoardingPass}
         onClose={() => setShowBoardingPass(false)}
         booking={selectedBooking}
+      />
+
+      {/* Cancellation Dialog */}
+      <CancellationDialog
+        open={showCancellation}
+        onClose={() => setShowCancellation(false)}
+        booking={selectedBooking}
+        onSuccess={handleCancellationSuccess}
       />
     </div>
   );

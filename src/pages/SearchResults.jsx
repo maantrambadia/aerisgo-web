@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, Plane, ArrowUpDown } from "lucide-react";
+import { ArrowLeft, Plane, ArrowUpDown, ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -175,15 +175,23 @@ export default function SearchResults() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [flights, setFlights] = useState([]);
+  const [returnFlights, setReturnFlights] = useState([]);
   const [error, setError] = useState("");
   const [sortBy, setSortBy] = useState("price-low");
+  const [selectedOutbound, setSelectedOutbound] = useState(null);
+  const [selectedReturn, setSelectedReturn] = useState(null);
 
   const from = searchParams.get("from") || "";
   const to = searchParams.get("to") || "";
   const date = searchParams.get("date") || "";
+  const returnDate = searchParams.get("returnDate") || "";
+  const tripType = searchParams.get("tripType") || "one-way";
   const passengers = searchParams.get("passengers") || "1";
+  const isRoundTrip = tripType === "round-trip";
 
-  useDocumentTitle(`${from} → ${to} Flights`);
+  useDocumentTitle(
+    isRoundTrip ? `${from} ⇄ ${to} Flights` : `${from} → ${to} Flights`
+  );
 
   useEffect(() => {
     if (!from || !to || !date) {
@@ -203,9 +211,11 @@ export default function SearchResults() {
         source: from,
         destination: to,
         date,
+        returnDate: isRoundTrip ? returnDate : undefined,
         passengers: Number(passengers),
       });
       setFlights(data.flights || []);
+      setReturnFlights(data.returnFlights || []);
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to fetch flights");
       toast.error(err?.response?.data?.message || "Failed to fetch flights");
@@ -297,11 +307,22 @@ export default function SearchResults() {
             </Button>
             <div className="flex-1">
               <h1 className="text-xl font-bold">
-                {from} → {to}
+                {from} {isRoundTrip ? "⇄" : "→"} {to}
               </h1>
               <p className="text-sm text-muted-foreground">
-                {formattedDate} • {passengers} Passenger
-                {passengers !== "1" ? "s" : ""}
+                {formattedDate}
+                {isRoundTrip && returnDate && (
+                  <>
+                    {" • "}
+                    {new Date(returnDate).toLocaleDateString("en-US", {
+                      day: "numeric",
+                      month: "short",
+                    })}
+                  </>
+                )}
+                {" • "}
+                {passengers} Passenger{passengers !== "1" ? "s" : ""}
+                {isRoundTrip && " • Round Trip"}
               </p>
             </div>
             <Link to="/">
@@ -334,7 +355,8 @@ export default function SearchResults() {
               Search Again
             </Button>
           </motion.div>
-        ) : flights.length === 0 ? (
+        ) : flights.length === 0 &&
+          (!isRoundTrip || returnFlights.length === 0) ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -353,6 +375,7 @@ export default function SearchResults() {
           </motion.div>
         ) : (
           <>
+            {/* Outbound Flights Section */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -360,9 +383,13 @@ export default function SearchResults() {
             >
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
-                  <h2 className="text-2xl font-bold mb-2">Available Flights</h2>
+                  <h2 className="text-2xl font-bold mb-2">
+                    {isRoundTrip
+                      ? "Select Outbound Flight"
+                      : "Available Flights"}
+                  </h2>
                   <p className="text-muted-foreground">
-                    {sortedFlights.length} flight
+                    {from} → {to} • {sortedFlights.length} flight
                     {sortedFlights.length !== 1 ? "s" : ""} found
                   </p>
                 </div>
@@ -411,21 +438,160 @@ export default function SearchResults() {
 
             <div className="grid gap-6 max-w-2xl mx-auto">
               {sortedFlights.map((flight, index) => (
-                <FlightCard
-                  key={flight._id || index}
-                  flight={flight}
-                  onClick={() => {
-                    // Store flight data in sessionStorage to persist through auth redirect
-                    sessionStorage.setItem(
-                      `flight_${flight._id}`,
-                      JSON.stringify({ flight, from, to, date, passengers })
-                    );
-                    // Navigate to flight details
-                    navigate(`/flight/${flight._id}`);
-                  }}
-                />
+                <div key={flight._id || index} className="relative">
+                  <FlightCard
+                    flight={flight}
+                    onClick={() => {
+                      if (isRoundTrip) {
+                        setSelectedOutbound(flight);
+                        toast.success(
+                          "Outbound flight selected. Now select return flight."
+                        );
+                        // Scroll to return flights section
+                        setTimeout(() => {
+                          document
+                            .getElementById("return-flights")
+                            ?.scrollIntoView({
+                              behavior: "smooth",
+                              block: "start",
+                            });
+                        }, 300);
+                      } else {
+                        // Store flight data in sessionStorage
+                        sessionStorage.setItem(
+                          `flight_${flight._id}`,
+                          JSON.stringify({
+                            flight,
+                            from,
+                            to,
+                            date,
+                            passengers,
+                            tripType: "one-way",
+                          })
+                        );
+                        navigate(`/flight/${flight._id}`);
+                      }
+                    }}
+                  />
+                  {isRoundTrip && selectedOutbound?._id === flight._id && (
+                    <div className="absolute top-2 right-2 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
+                      <ArrowLeftRight className="h-3 w-3" />
+                      Selected
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
+
+            {/* Return Flights Section */}
+            {isRoundTrip && (
+              <>
+                {returnFlights.length > 0 ? (
+                  <motion.div
+                    id="return-flights"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="mt-12"
+                  >
+                    <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+                      <div>
+                        <h2 className="text-2xl font-bold mb-2">
+                          Select Return Flight
+                        </h2>
+                        <p className="text-muted-foreground">
+                          {to} → {from} • {returnFlights.length} flight
+                          {returnFlights.length !== 1 ? "s" : ""} found
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-6 max-w-2xl mx-auto">
+                      {returnFlights.map((flight, index) => (
+                        <div key={flight._id || index} className="relative">
+                          <FlightCard
+                            flight={flight}
+                            onClick={() => {
+                              if (!selectedOutbound) {
+                                toast.error(
+                                  "Please select an outbound flight first"
+                                );
+                                window.scrollTo({ top: 0, behavior: "smooth" });
+                                return;
+                              }
+                              setSelectedReturn(flight);
+
+                              // Store both flights in sessionStorage
+                              sessionStorage.setItem(
+                                `flight_${selectedOutbound._id}`,
+                                JSON.stringify({
+                                  outboundFlight: selectedOutbound,
+                                  returnFlight: flight,
+                                  from,
+                                  to,
+                                  date,
+                                  returnDate,
+                                  passengers,
+                                  tripType: "round-trip",
+                                })
+                              );
+
+                              toast.success("Both flights selected!");
+                              navigate(`/flight/${selectedOutbound._id}`);
+                            }}
+                          />
+                          {selectedReturn?._id === flight._id && (
+                            <div className="absolute top-2 right-2 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
+                              <ArrowLeftRight className="h-3 w-3" />
+                              Selected
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="mt-12 text-center py-12 rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/10"
+                  >
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/20 mb-4">
+                      <Plane className="h-8 w-8 text-amber-600 dark:text-amber-500" />
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">
+                      No Return Flights Available
+                    </h3>
+                    <p className="text-muted-foreground mb-4 max-w-md mx-auto">
+                      Unfortunately, there are no return flights available from{" "}
+                      <span className="font-semibold">{to}</span> to{" "}
+                      <span className="font-semibold">{from}</span> on{" "}
+                      {returnDate && (
+                        <span className="font-semibold">
+                          {new Date(returnDate).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </span>
+                      )}
+                      .
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-6">
+                      Try selecting a different return date or search for
+                      one-way flights instead.
+                    </p>
+                    <Button
+                      onClick={() => navigate("/")}
+                      className="rounded-full"
+                    >
+                      Modify Search
+                    </Button>
+                  </motion.div>
+                )}
+              </>
+            )}
           </>
         )}
       </div>

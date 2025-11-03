@@ -84,12 +84,29 @@ export default function PassengerDetails() {
   };
 
   const bookingData = getBookingData();
-  const { flight, seats, from, to, date } = bookingData || {};
+  const {
+    flight,
+    outboundFlight,
+    returnFlight,
+    seats,
+    outboundSeats,
+    returnSeats,
+    from,
+    to,
+    date,
+    returnDate,
+    passengers: passengersCount,
+    tripType,
+  } = bookingData || {};
+
+  const isRoundTrip = tripType === "round-trip";
+  const displayFlight = outboundFlight || flight;
+  const displaySeats = outboundSeats || seats;
 
   useDocumentTitle("Passenger Details");
 
   useEffect(() => {
-    if (!flight || !seats) {
+    if (!displayFlight || !displaySeats) {
       navigate("/");
       return;
     }
@@ -103,7 +120,7 @@ export default function PassengerDetails() {
       setUserProfile(res.data);
 
       // Initialize passengers array with empty forms
-      const initialPassengers = seats.map((seat, index) => ({
+      const initialPassengers = displaySeats.map((seat, index) => ({
         seatNumber: seat.seatNumber,
         isPrimary: index === 0, // First passenger is primary
         fullName: index === 0 ? res.data.user.name : "",
@@ -176,11 +193,11 @@ export default function PassengerDetails() {
     };
 
     sessionStorage.setItem(
-      `booking_${flight._id}`,
+      `booking_${displayFlight._id}`,
       JSON.stringify(updatedBookingData)
     );
 
-    navigate(`/booking-confirmation/${flight._id}`);
+    navigate(`/booking-confirmation/${displayFlight._id}`);
   }
 
   const formatTime = (dateString) => {
@@ -196,7 +213,7 @@ export default function PassengerDetails() {
     }
   };
 
-  if (loading || !flight || !seats) {
+  if (loading || !displayFlight || !displaySeats) {
     return <LoadingFallback />;
   }
 
@@ -227,7 +244,7 @@ export default function PassengerDetails() {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Flight Info Card with Ticket Notches */}
+        {/* Flight Info Card - Outbound */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -236,6 +253,19 @@ export default function PassengerDetails() {
             backgroundColor: "#541424",
           }}
         >
+          {isRoundTrip && (
+            <div className="mb-3">
+              <span
+                className="text-xs font-semibold px-3 py-1 rounded-full"
+                style={{
+                  backgroundColor: "rgba(227, 215, 203, 0.3)",
+                  color: "#e3d7cb",
+                }}
+              >
+                Outbound Flight
+              </span>
+            </div>
+          )}
           <div className="flex items-center justify-between mb-4">
             <RoutePill from={from} to={to} />
             <span
@@ -252,14 +282,14 @@ export default function PassengerDetails() {
           <div className="flex items-center justify-between">
             <div>
               <div className="text-2xl font-bold" style={{ color: "#e3d7cb" }}>
-                {flight.flightNumber}
+                {displayFlight.flightNumber}
               </div>
               <div
                 className="text-sm mt-1"
                 style={{ color: "rgba(227, 215, 203, 0.7)" }}
               >
-                {formatTime(flight.departureTime)} -{" "}
-                {formatTime(flight.arrivalTime)}
+                {formatTime(displayFlight.departureTime)} -{" "}
+                {formatTime(displayFlight.arrivalTime)}
               </div>
             </div>
             <div className="text-right">
@@ -267,10 +297,10 @@ export default function PassengerDetails() {
                 className="text-sm font-medium"
                 style={{ color: "rgba(227, 215, 203, 0.7)" }}
               >
-                {seats.length} Seat{seats.length > 1 ? "s" : ""}
+                {displaySeats.length} Seat{displaySeats.length > 1 ? "s" : ""}
               </div>
               <div className="text-lg font-bold" style={{ color: "#e3d7cb" }}>
-                {seats.map((s) => s.seatNumber).join(", ")}
+                {displaySeats.map((s) => s.seatNumber).join(", ")}
               </div>
             </div>
           </div>
@@ -278,6 +308,75 @@ export default function PassengerDetails() {
           <Notch side="left" />
           <Notch side="right" />
         </motion.div>
+
+        {/* Return Flight Info Card */}
+        {isRoundTrip && returnFlight && returnSeats && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="relative rounded-[28px] p-6 mb-6 overflow-hidden"
+            style={{
+              backgroundColor: "#541424",
+            }}
+          >
+            <div className="mb-3">
+              <span
+                className="text-xs font-semibold px-3 py-1 rounded-full"
+                style={{
+                  backgroundColor: "rgba(227, 215, 203, 0.3)",
+                  color: "#e3d7cb",
+                }}
+              >
+                Return Flight
+              </span>
+            </div>
+            <div className="flex items-center justify-between mb-4">
+              <RoutePill from={to} to={from} />
+              <span
+                className="text-sm font-medium"
+                style={{ color: "rgba(227, 215, 203, 0.7)" }}
+              >
+                {new Date(returnDate).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <div
+                  className="text-2xl font-bold"
+                  style={{ color: "#e3d7cb" }}
+                >
+                  {returnFlight.flightNumber}
+                </div>
+                <div
+                  className="text-sm mt-1"
+                  style={{ color: "rgba(227, 215, 203, 0.7)" }}
+                >
+                  {formatTime(returnFlight.departureTime)} -{" "}
+                  {formatTime(returnFlight.arrivalTime)}
+                </div>
+              </div>
+              <div className="text-right">
+                <div
+                  className="text-sm font-medium"
+                  style={{ color: "rgba(227, 215, 203, 0.7)" }}
+                >
+                  {returnSeats.length} Seat{returnSeats.length > 1 ? "s" : ""}
+                </div>
+                <div className="text-lg font-bold" style={{ color: "#e3d7cb" }}>
+                  {returnSeats.map((s) => s.seatNumber).join(", ")}
+                </div>
+              </div>
+            </div>
+            {/* Ticket notches */}
+            <Notch side="left" />
+            <Notch side="right" />
+          </motion.div>
+        )}
 
         {/* Passenger Forms */}
         {passengers.map((passenger, index) => (

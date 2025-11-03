@@ -66,17 +66,30 @@ export default function FlightDetails() {
   };
 
   const flightData = getFlightData();
-  const { flight, from, to, date, passengers } = flightData || {};
+  const {
+    flight,
+    outboundFlight,
+    returnFlight,
+    from,
+    to,
+    date,
+    returnDate,
+    passengers,
+    tripType,
+  } = flightData || {};
+
+  const isRoundTrip = tripType === "round-trip";
+  const displayFlight = outboundFlight || flight;
 
   useDocumentTitle("Flight Details");
 
   useEffect(() => {
-    if (!flight) {
+    if (!displayFlight) {
       navigate("/");
       return;
     }
     setTimeout(() => setLoading(false), 300);
-  }, [flight, navigate]);
+  }, [displayFlight, navigate]);
 
   const formatTime = (dateString) => {
     try {
@@ -104,14 +117,31 @@ export default function FlightDetails() {
     }
   };
 
-  if (loading || !flight) {
+  if (loading || !displayFlight) {
     return <LoadingFallback />;
   }
 
-  const departTime = formatTime(flight.departureTime);
-  const arriveTime = formatTime(flight.arrivalTime);
-  const duration = calculateDuration(flight.departureTime, flight.arrivalTime);
-  const price = flight.baseFare?.toLocaleString("en-IN") || "0";
+  const departTime = formatTime(displayFlight.departureTime);
+  const arriveTime = formatTime(displayFlight.arrivalTime);
+  const duration = calculateDuration(
+    displayFlight.departureTime,
+    displayFlight.arrivalTime
+  );
+  const price = displayFlight.baseFare?.toLocaleString("en-IN") || "0";
+
+  // Return flight details if round-trip
+  const returnDepartTime = returnFlight
+    ? formatTime(returnFlight.departureTime)
+    : null;
+  const returnArriveTime = returnFlight
+    ? formatTime(returnFlight.arrivalTime)
+    : null;
+  const returnDuration = returnFlight
+    ? calculateDuration(returnFlight.departureTime, returnFlight.arrivalTime)
+    : null;
+  const returnPrice = returnFlight
+    ? returnFlight.baseFare?.toLocaleString("en-IN") || "0"
+    : null;
 
   const amenities = [
     { icon: Wifi, label: "Wi-Fi" },
@@ -164,19 +194,46 @@ export default function FlightDetails() {
               className="text-3xl font-bold leading-9 -mt-1"
               style={{ color: "#541424" }}
             >
-              Flight
+              {isRoundTrip ? "Flights" : "Flight"}
             </h2>
+            {isRoundTrip && (
+              <p
+                className="text-sm mt-1"
+                style={{ color: "rgba(84, 20, 36, 0.6)" }}
+              >
+                Round Trip
+              </p>
+            )}
           </div>
           <RoutePill from={from} to={to} />
         </motion.div>
 
-        {/* Flight Ticket Card */}
+        {/* Outbound Flight Ticket Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           className="relative mt-4"
         >
+          {isRoundTrip && (
+            <div className="mb-2 flex items-center gap-2">
+              <span
+                className="text-sm font-semibold"
+                style={{ color: "#541424" }}
+              >
+                Outbound Flight
+              </span>
+              <span
+                className="text-xs"
+                style={{ color: "rgba(84, 20, 36, 0.6)" }}
+              >
+                {new Date(date).toLocaleDateString("en-US", {
+                  day: "numeric",
+                  month: "short",
+                })}
+              </span>
+            </div>
+          )}
           <div
             className="rounded-[28px] p-5 overflow-hidden"
             style={{ backgroundColor: "#541424" }}
@@ -305,7 +362,7 @@ export default function FlightDetails() {
                 className="font-semibold text-sm"
                 style={{ color: "#541424" }}
               >
-                {flight.flightNumber || "AG-101"}
+                {displayFlight.flightNumber || "AG-101"}
               </span>
             </div>
 
@@ -320,7 +377,7 @@ export default function FlightDetails() {
                 className="font-semibold text-sm"
                 style={{ color: "#541424" }}
               >
-                {flight.aircraftType || "A320 Neo"}
+                {displayFlight.aircraftType || "A320 Neo"}
               </span>
             </div>
 
@@ -361,11 +418,226 @@ export default function FlightDetails() {
           </div>
         </motion.div>
 
+        {/* Return Flight Ticket Card */}
+        {isRoundTrip && returnFlight && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+            className="relative mt-6"
+          >
+            <div className="mb-2 flex items-center gap-2">
+              <span
+                className="text-sm font-semibold"
+                style={{ color: "#541424" }}
+              >
+                Return Flight
+              </span>
+              <span
+                className="text-xs"
+                style={{ color: "rgba(84, 20, 36, 0.6)" }}
+              >
+                {new Date(returnDate).toLocaleDateString("en-US", {
+                  day: "numeric",
+                  month: "short",
+                })}
+              </span>
+            </div>
+            <div
+              className="rounded-[28px] p-5 overflow-hidden"
+              style={{ backgroundColor: "#541424" }}
+            >
+              {/* Top row times/cities + arc */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p
+                    className="font-semibold text-[11px]"
+                    style={{ color: "rgba(227, 215, 203, 0.9)" }}
+                  >
+                    {to}
+                  </p>
+                  <p
+                    className="font-bold text-2xl mt-1"
+                    style={{ color: "#e3d7cb" }}
+                  >
+                    {returnDepartTime}
+                  </p>
+                </div>
+
+                {/* Arc with plane */}
+                <div
+                  style={{ width: "110px", alignItems: "center" }}
+                  className="flex flex-col"
+                >
+                  <div
+                    style={{
+                      width: "100px",
+                      height: "44px",
+                      overflow: "hidden",
+                      alignItems: "center",
+                      justifyContent: "flex-end",
+                      display: "flex",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "100px",
+                        height: "100px",
+                        borderRadius: "50px",
+                        borderWidth: "1px",
+                        borderStyle: "dashed",
+                        borderColor: "rgba(227, 215, 203, 0.45)",
+                      }}
+                    />
+                  </div>
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center -mt-6"
+                    style={{
+                      backgroundColor: "#541424",
+                      border: "1px solid rgba(227, 215, 203, 0.4)",
+                    }}
+                  >
+                    <Plane
+                      className="h-4 w-4 rotate-90"
+                      style={{ color: "#e3d7cb" }}
+                    />
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <p
+                    className="font-semibold text-[11px]"
+                    style={{ color: "rgba(227, 215, 203, 0.9)" }}
+                  >
+                    {from}
+                  </p>
+                  <p
+                    className="font-bold text-2xl mt-1"
+                    style={{ color: "#e3d7cb" }}
+                  >
+                    {returnArriveTime}
+                  </p>
+                </div>
+              </div>
+
+              {/* Duration */}
+              <p
+                className="font-medium text-[11px] text-center mt-2"
+                style={{ color: "rgba(227, 215, 203, 0.7)" }}
+              >
+                {returnDuration}
+              </p>
+
+              {/* Bottom brand/price bar */}
+              <div className="flex items-center justify-between mt-4">
+                <p className="font-bold text-2xl" style={{ color: "#e3d7cb" }}>
+                  AerisGo
+                </p>
+                <p className="font-bold text-xl" style={{ color: "#e3d7cb" }}>
+                  ₹ {returnPrice}
+                </p>
+              </div>
+            </div>
+
+            {/* Ticket notches */}
+            <Notch side="left" />
+            <Notch side="right" />
+          </motion.div>
+        )}
+
+        {/* Return Flight Information */}
+        {isRoundTrip && returnFlight && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="rounded-[24px] p-5 border mt-6"
+            style={{
+              backgroundColor: "rgba(227, 215, 203, 0.4)",
+              borderColor: "rgba(84, 20, 36, 0.1)",
+            }}
+          >
+            <h3
+              className="font-bold text-base mb-4"
+              style={{ color: "#541424" }}
+            >
+              Return Flight Information
+            </h3>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span
+                  className="font-medium text-sm"
+                  style={{ color: "rgba(84, 20, 36, 0.7)" }}
+                >
+                  Flight Number
+                </span>
+                <span
+                  className="font-semibold text-sm"
+                  style={{ color: "#541424" }}
+                >
+                  {returnFlight.flightNumber || "AG-102"}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span
+                  className="font-medium text-sm"
+                  style={{ color: "rgba(84, 20, 36, 0.7)" }}
+                >
+                  Aircraft
+                </span>
+                <span
+                  className="font-semibold text-sm"
+                  style={{ color: "#541424" }}
+                >
+                  {returnFlight.aircraftType || "A320 Neo"}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span
+                  className="font-medium text-sm"
+                  style={{ color: "rgba(84, 20, 36, 0.7)" }}
+                >
+                  Date
+                </span>
+                <span
+                  className="font-semibold text-sm"
+                  style={{ color: "#541424" }}
+                >
+                  {new Date(returnDate).toLocaleDateString("en-US", {
+                    weekday: "short",
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span
+                  className="font-medium text-sm"
+                  style={{ color: "rgba(84, 20, 36, 0.7)" }}
+                >
+                  Passengers
+                </span>
+                <span
+                  className="font-semibold text-sm"
+                  style={{ color: "#541424" }}
+                >
+                  {passengers || 1}
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Amenities */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: isRoundTrip ? 0.5 : 0.4 }}
           className="mt-6 mb-4"
         >
           <h3 className="font-bold text-base mb-4" style={{ color: "#541424" }}>
@@ -405,7 +677,7 @@ export default function FlightDetails() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
+          transition={{ delay: isRoundTrip ? 0.7 : 0.6 }}
           className="mt-8 mb-8"
         >
           <Button
@@ -413,14 +685,37 @@ export default function FlightDetails() {
             className="w-full h-12 text-base rounded-full"
             onClick={() => {
               // Store flight data and navigate to seat selection
-              sessionStorage.setItem(
-                `flight_${flight._id}`,
-                JSON.stringify({ flight, from, to, date, passengers })
-              );
-              navigate(`/seat-selection/${flight._id}`);
+              if (isRoundTrip) {
+                sessionStorage.setItem(
+                  `flight_${displayFlight._id}`,
+                  JSON.stringify({
+                    outboundFlight: displayFlight,
+                    returnFlight,
+                    from,
+                    to,
+                    date,
+                    returnDate,
+                    passengers,
+                    tripType: "round-trip",
+                  })
+                );
+              } else {
+                sessionStorage.setItem(
+                  `flight_${displayFlight._id}`,
+                  JSON.stringify({
+                    flight: displayFlight,
+                    from,
+                    to,
+                    date,
+                    passengers,
+                    tripType: "one-way",
+                  })
+                );
+              }
+              navigate(`/seat-selection/${displayFlight._id}`);
             }}
           >
-            Select Seat
+            Select Seats
           </Button>
         </motion.div>
       </div>
