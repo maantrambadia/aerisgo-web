@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -8,6 +8,7 @@ import {
   CreditCard,
   Lock,
   X,
+  Clock,
   Check,
   ShieldCheck,
 } from "lucide-react";
@@ -69,6 +70,8 @@ export default function BookingConfirmation() {
   const [rewardPointsToUse, setRewardPointsToUse] = useState(0);
   const [pricingConfig, setPricingConfig] = useState(null);
   const [pointsEarned, setPointsEarned] = useState(0);
+  const [timeRemaining, setTimeRemaining] = useState(600); // 10 minutes in seconds
+  const timerRef = useRef(null);
 
   // Get booking data from sessionStorage
   const getBookingData = () => {
@@ -113,6 +116,39 @@ export default function BookingConfirmation() {
     fetchInitialData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Countdown timer for seat lock
+  useEffect(() => {
+    if (!dynamicTotalPrice) return; // Only use lockStartTime from sessionStorage
+
+    const startTime = parseInt(lockStartTime);
+    if (!startTime) return;
+
+    const updateTimer = () => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const remaining = Math.max(0, 600 - elapsed);
+      setTimeRemaining(remaining);
+
+      if (remaining === 0) {
+        clearInterval(timerRef.current);
+        toast.error(
+          "Time expired! Your seat selection has expired. Please select again."
+        );
+        setTimeout(() => {
+          navigate("/");
+        }, 2000);
+      }
+    };
+
+    updateTimer();
+    timerRef.current = setInterval(updateTimer, 1000);
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [lockStartTime, dynamicTotalPrice, navigate]);
 
   async function fetchInitialData() {
     try {
@@ -249,6 +285,13 @@ export default function BookingConfirmation() {
     setRewardPointsToUse(maxUsable);
     toast.success(`${maxUsable} points applied (₹${maxUsable} discount)`);
   }
+
+  // Format time remaining
+  const formatTimeRemaining = () => {
+    const minutes = Math.floor(timeRemaining / 60);
+    const seconds = timeRemaining % 60;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  };
 
   function handleRemoveRewards() {
     setRewardPointsToUse(0);
@@ -473,6 +516,46 @@ export default function BookingConfirmation() {
 
       {/* Content */}
       <div className="container mx-auto px-4 py-8 max-w-2xl pb-32">
+        {/* Seat Lock Timer */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`rounded-2xl p-4 flex items-center gap-3 border mb-6 ${
+            timeRemaining <= 60
+              ? "bg-red-50 border-red-200"
+              : "bg-yellow-50 border-yellow-200"
+          }`}
+        >
+          <div
+            className={`w-10 h-10 rounded-full flex items-center justify-center ${
+              timeRemaining <= 60 ? "bg-red-100" : "bg-yellow-100"
+            }`}
+          >
+            <Clock
+              className="h-5 w-5"
+              style={{
+                color: timeRemaining <= 60 ? "#dc2626" : "#ca8a04",
+              }}
+            />
+          </div>
+          <div className="flex-1">
+            <p
+              className={`font-semibold text-sm ${
+                timeRemaining <= 60 ? "text-red-700" : "text-yellow-700"
+              }`}
+            >
+              Complete booking in {formatTimeRemaining()}
+            </p>
+            <p
+              className={`text-xs ${
+                timeRemaining <= 60 ? "text-red-600" : "text-yellow-600"
+              }`}
+            >
+              Your seats will be released after the timer expires
+            </p>
+          </div>
+        </motion.div>
+
         {/* Title + Route */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

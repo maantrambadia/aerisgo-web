@@ -138,6 +138,9 @@ export default function SeatSelection() {
   const [outboundLockedSeats, setOutboundLockedSeats] = useState(new Map()); // Map<seatNumber, {lockedBy, expiresAt}>
   const [returnLockedSeats, setReturnLockedSeats] = useState(new Map()); // Map<seatNumber, {lockedBy, expiresAt}>
   const userUnlockingRef = useRef(new Set()); // Track seats being unlocked by user
+  const [lockStartTime, setLockStartTime] = useState(null); // Track when first seat was locked
+  const [timeRemaining, setTimeRemaining] = useState(600); // 10 minutes in seconds
+  const timerRef = useRef(null);
 
   // Get the appropriate locked seats map based on current view
   const lockedSeats = showingReturnSeats
@@ -278,6 +281,49 @@ export default function SeatSelection() {
       }, 1500);
     }
   }
+
+  // Timer countdown effect
+  useEffect(() => {
+    if (!lockStartTime) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
+
+    const updateTimer = () => {
+      const elapsed = Math.floor((Date.now() - lockStartTime) / 1000);
+      const remaining = Math.max(0, 600 - elapsed);
+      setTimeRemaining(remaining);
+
+      if (remaining === 0) {
+        clearInterval(timerRef.current);
+        toast.error(
+          "Time expired! Your seat selection has expired. Please select again."
+        );
+        setTimeout(() => {
+          navigate(-1);
+        }, 2000);
+      }
+    };
+
+    updateTimer();
+    timerRef.current = setInterval(updateTimer, 1000);
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [lockStartTime, navigate]);
+
+  // Format time remaining
+  const formatTimeRemaining = () => {
+    const minutes = Math.floor(timeRemaining / 60);
+    const seconds = timeRemaining % 60;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  };
 
   // Socket.IO real-time event handlers
   const socketHandlers = useMemo(
@@ -469,9 +515,19 @@ export default function SeatSelection() {
           seatNumber: seat.seatNumber,
           sessionId,
         });
-        setCurrentSeats(
-          currentSeats.filter((s) => s.seatNumber !== seat.seatNumber)
+        const newSeats = currentSeats.filter(
+          (s) => s.seatNumber !== seat.seatNumber
         );
+        setCurrentSeats(newSeats);
+
+        // Reset timer if all seats are deselected
+        const allSeatsCount = showingReturnSeats
+          ? selectedSeats.length + newSeats.length
+          : newSeats.length + selectedReturnSeats.length;
+        if (allSeatsCount === 0) {
+          setLockStartTime(null);
+          setTimeRemaining(600);
+        }
 
         // Remove from tracking after a short delay
         setTimeout(() => {
@@ -502,6 +558,14 @@ export default function SeatSelection() {
           previousSeat,
         });
         setCurrentSeats([...currentSeats, seat]);
+
+        // Start timer when first seat is selected
+        const allSeatsCount = showingReturnSeats
+          ? selectedSeats.length + currentSeats.length + 1
+          : currentSeats.length + 1 + selectedReturnSeats.length;
+        if (allSeatsCount === 1 && !lockStartTime) {
+          setLockStartTime(Date.now());
+        }
       } catch (error) {
         console.error("Failed to lock seat:", error);
         const message =
@@ -572,6 +636,7 @@ export default function SeatSelection() {
           passengers,
           tripType: "round-trip",
           totalPrice, // Pass dynamic price
+          lockStartTime, // Pass timer start time
         })
       );
     } else {
@@ -586,6 +651,7 @@ export default function SeatSelection() {
           passengers,
           tripType: "one-way",
           totalPrice, // Pass dynamic price
+          lockStartTime, // Pass timer start time
         })
       );
     }
@@ -1183,6 +1249,46 @@ export default function SeatSelection() {
           transition={{ delay: 0.6 }}
           className="max-w-2xl mx-auto"
         >
+          {/* Timer Display */}
+          {lockStartTime && (
+            <div
+              className={`rounded-[20px] p-4 mb-4 border flex items-center gap-3 ${
+                timeRemaining <= 60
+                  ? "bg-red-50 border-red-200"
+                  : "bg-yellow-50 border-yellow-200"
+              }`}
+            >
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  timeRemaining <= 60 ? "bg-red-100" : "bg-yellow-100"
+                }`}
+              >
+                <Clock
+                  className="h-5 w-5"
+                  style={{
+                    color: timeRemaining <= 60 ? "#dc2626" : "#ca8a04",
+                  }}
+                />
+              </div>
+              <div className="flex-1">
+                <p
+                  className={`font-semibold text-sm ${
+                    timeRemaining <= 60 ? "text-red-700" : "text-yellow-700"
+                  }`}
+                >
+                  Complete booking in {formatTimeRemaining()}
+                </p>
+                <p
+                  className={`text-xs ${
+                    timeRemaining <= 60 ? "text-red-600" : "text-yellow-600"
+                  }`}
+                >
+                  Seats will be released after timer expires
+                </p>
+              </div>
+            </div>
+          )}
+
           <div
             className="rounded-[20px] p-4 mb-4 border"
             style={{
