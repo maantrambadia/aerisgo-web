@@ -571,6 +571,7 @@ export default function SeatSelection() {
           returnDate,
           passengers,
           tripType: "round-trip",
+          totalPrice, // Pass dynamic price
         })
       );
     } else {
@@ -584,6 +585,7 @@ export default function SeatSelection() {
           date,
           passengers,
           tripType: "one-way",
+          totalPrice, // Pass dynamic price
         })
       );
     }
