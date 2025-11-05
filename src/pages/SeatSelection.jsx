@@ -489,8 +489,12 @@ export default function SeatSelection() {
 
       // Lock the seat
       try {
+        // Only pass previousSeat if we're at max capacity (replacing a seat)
+        // For multiple passengers, don't unlock previous seats
         const previousSeat =
-          currentSeats.length > 0 ? currentSeats[0].seatNumber : undefined;
+          currentSeats.length >= maxSeats
+            ? currentSeats[0].seatNumber
+            : undefined;
         await lockSeat({
           flightId: currentFlightId,
           seatNumber: seat.seatNumber,
