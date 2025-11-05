@@ -8,6 +8,17 @@ export default function BoardingPassModal({ isOpen, onClose, booking }) {
   const departureDate = new Date(flight.departureTime);
   const arrivalDate = new Date(flight.arrivalTime);
 
+  // Get all passengers or fallback to single booking
+  const passengers =
+    booking.passengers && booking.passengers.length > 0
+      ? booking.passengers
+      : [
+          {
+            fullName: booking.userId?.name || "Passenger",
+            seatNumber: booking.seatNumber,
+          },
+        ];
+
   const formatTime = (date) => {
     return date.toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -109,7 +120,7 @@ export default function BoardingPassModal({ isOpen, onClose, booking }) {
             </div>
 
             {/* Content */}
-            <div className="px-6 py-6">
+            <div className="px-6 py-6 max-h-[70vh] overflow-y-auto">
               {/* Airline */}
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold" style={{ color: "#541424" }}>
@@ -172,88 +183,111 @@ export default function BoardingPassModal({ isOpen, onClose, booking }) {
                 </div>
               </div>
 
-              {/* Details Grid */}
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <div>
-                    <p
-                      className="text-xs font-medium"
-                      style={{ color: "rgba(84, 20, 36, 0.6)" }}
-                    >
-                      Passenger
-                    </p>
-                    <p
-                      className="text-base font-semibold mt-1"
-                      style={{ color: "#541424" }}
-                    >
-                      {booking.userId?.name || "Passenger"}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p
-                      className="text-xs font-medium"
-                      style={{ color: "rgba(84, 20, 36, 0.6)" }}
-                    >
-                      Seat
-                    </p>
-                    <p
-                      className="text-base font-semibold mt-1"
-                      style={{ color: "#541424" }}
-                    >
-                      {booking.seatNumber}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex justify-between">
-                  <div>
-                    <p
-                      className="text-xs font-medium"
-                      style={{ color: "rgba(84, 20, 36, 0.6)" }}
-                    >
-                      Class
-                    </p>
-                    <p
-                      className="text-base font-semibold mt-1 capitalize"
-                      style={{ color: "#541424" }}
-                    >
-                      {booking.travelClass}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p
-                      className="text-xs font-medium"
-                      style={{ color: "rgba(84, 20, 36, 0.6)" }}
-                    >
-                      Gate
-                    </p>
-                    <p
-                      className="text-base font-semibold mt-1"
-                      style={{ color: "#541424" }}
-                    >
-                      {booking.boardingPass?.gate || flight.gate || "TBA"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                className="mt-6 h-16 rounded-2xl overflow-x-auto overflow-y-hidden"
-                style={{ backgroundColor: "rgba(84, 20, 36, 0.1)" }}
-              >
-                <div className="flex h-full items-end px-2 w-max">
-                  {Array.from({ length: 60 }).map((_, i) => (
+              {/* Passengers - Show all boarding passes */}
+              {passengers.map((passenger, index) => (
+                <div key={index}>
+                  {index > 0 && (
                     <div
-                      key={i}
-                      className="mr-1"
-                      style={{
-                        width: Math.random() > 0.5 ? "2px" : "3px",
-                        height: "100%",
-                        backgroundColor: "#541424",
-                      }}
+                      className="my-6 border-t-2 border-dashed"
+                      style={{ borderColor: "rgba(84, 20, 36, 0.2)" }}
                     />
-                  ))}
+                  )}
+
+                  {/* Passenger Header */}
+                  {passengers.length > 1 && (
+                    <p
+                      className="text-sm font-bold mb-4"
+                      style={{ color: "#541424" }}
+                    >
+                      Passenger {index + 1} of {passengers.length}
+                    </p>
+                  )}
+
+                  {/* Details Grid */}
+                  <div className="space-y-4">
+                    <div className="flex justify-between">
+                      <div>
+                        <p
+                          className="text-xs font-medium"
+                          style={{ color: "rgba(84, 20, 36, 0.6)" }}
+                        >
+                          Passenger
+                        </p>
+                        <p
+                          className="text-base font-semibold mt-1"
+                          style={{ color: "#541424" }}
+                        >
+                          {passenger.fullName}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p
+                          className="text-xs font-medium"
+                          style={{ color: "rgba(84, 20, 36, 0.6)" }}
+                        >
+                          Seat
+                        </p>
+                        <p
+                          className="text-base font-semibold mt-1"
+                          style={{ color: "#541424" }}
+                        >
+                          {passenger.seatNumber}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex justify-between">
+                      <div>
+                        <p
+                          className="text-xs font-medium"
+                          style={{ color: "rgba(84, 20, 36, 0.6)" }}
+                        >
+                          Class
+                        </p>
+                        <p
+                          className="text-base font-semibold mt-1 capitalize"
+                          style={{ color: "#541424" }}
+                        >
+                          {booking.travelClass}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p
+                          className="text-xs font-medium"
+                          style={{ color: "rgba(84, 20, 36, 0.6)" }}
+                        >
+                          Gate
+                        </p>
+                        <p
+                          className="text-base font-semibold mt-1"
+                          style={{ color: "#541424" }}
+                        >
+                          {booking.boardingPass?.gate || flight.gate || "TBA"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Barcode for each passenger */}
+                  <div
+                    className="mt-6 h-16 rounded-2xl overflow-x-auto overflow-y-hidden"
+                    style={{ backgroundColor: "rgba(84, 20, 36, 0.1)" }}
+                  >
+                    <div className="flex h-full items-end px-2 w-max">
+                      {Array.from({ length: 60 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="mr-1"
+                          style={{
+                            width: Math.random() > 0.5 ? "2px" : "3px",
+                            height: "100%",
+                            backgroundColor: "#541424",
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
 
               {/* PNR */}
               <p
