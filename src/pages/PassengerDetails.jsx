@@ -148,6 +148,28 @@ export default function PassengerDetails() {
     }
   }
 
+  // Name formatting helper (only letters and spaces, capitalize first letter of each word)
+  const formatNameLive = (raw) => {
+    const src = String(raw || "");
+    const onlyLetters = src.replace(/[^a-zA-Z\s]/g, "");
+    const hadTrailing = /\s$/.test(onlyLetters);
+    const collapsed = onlyLetters.replace(/\s{2,}/g, " ");
+    const parts = collapsed.split(" ");
+    const titleCased = parts
+      .map((w) =>
+        w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : ""
+      )
+      .join(" ");
+    // Avoid double trailing spaces
+    return hadTrailing && !titleCased.endsWith(" ")
+      ? `${titleCased} `
+      : titleCased;
+  };
+
+  // Document validation functions
+  const isValidAadhar = (v) => /^\d{12}$/.test(v);
+  const isValidPassport = (v) => /^[A-Z][0-9]{7}$/.test(v);
+
   function handlePassengerChange(index, field, value) {
     setPassengers((prev) =>
       prev.map((p, i) => (i === index ? { ...p, [field]: value } : p))
@@ -175,6 +197,19 @@ export default function PassengerDetails() {
       }
       if (!p.documentNumber || !p.documentNumber.trim()) {
         toast.error(`Please enter document number for passenger ${i + 1}`);
+        return false;
+      }
+      // Validate document number format
+      if (p.documentType === "aadhar" && !isValidAadhar(p.documentNumber)) {
+        toast.error(`Aadhar must be 12 digits for passenger ${i + 1}`);
+        return false;
+      }
+      if (p.documentType === "passport" && !isValidPassport(p.documentNumber)) {
+        toast.error(
+          `Passport format: 1 letter + 7 digits (e.g., A1234567) for passenger ${
+            i + 1
+          }`
+        );
         return false;
       }
     }
@@ -432,9 +467,10 @@ export default function PassengerDetails() {
                   id={`name-${index}`}
                   placeholder="As per ID proof"
                   value={passenger.fullName}
-                  onChange={(e) =>
-                    handlePassengerChange(index, "fullName", e.target.value)
-                  }
+                  onChange={(e) => {
+                    const formatted = formatNameLive(e.target.value);
+                    handlePassengerChange(index, "fullName", formatted);
+                  }}
                   disabled={passenger.isPrimary}
                 />
                 {passenger.isPrimary && passenger.fullName && (
@@ -515,16 +551,47 @@ export default function PassengerDetails() {
                 </Label>
                 <Input
                   id={`docNumber-${index}`}
-                  placeholder="Enter document number"
-                  value={passenger.documentNumber}
-                  onChange={(e) =>
-                    handlePassengerChange(
-                      index,
-                      "documentNumber",
-                      e.target.value.toUpperCase()
-                    )
+                  placeholder={
+                    passenger.documentType === "aadhar"
+                      ? "123456789012"
+                      : passenger.documentType === "passport"
+                      ? "A1234567"
+                      : "Enter document number"
                   }
+                  value={passenger.documentNumber}
+                  onChange={(e) => {
+                    let formatted = "";
+                    const value = e.target.value;
+                    if (passenger.documentType === "aadhar") {
+                      // Aadhar: Only digits, max 12
+                      formatted = value.replace(/\D/g, "").slice(0, 12);
+                    } else if (passenger.documentType === "passport") {
+                      // Passport: 1 uppercase letter + 7 digits (e.g., A1234567)
+                      const upper = value.toUpperCase();
+                      if (upper.length === 0) {
+                        formatted = "";
+                      } else if (upper.length === 1) {
+                        // First character must be a letter
+                        formatted = upper.replace(/[^A-Z]/g, "");
+                      } else {
+                        // First char is letter, rest are digits
+                        const firstChar = upper
+                          .charAt(0)
+                          .replace(/[^A-Z]/g, "");
+                        const restDigits = upper
+                          .slice(1)
+                          .replace(/\D/g, "")
+                          .slice(0, 7);
+                        formatted = firstChar + restDigits;
+                      }
+                    } else {
+                      // No document type selected yet
+                      formatted = value.toUpperCase().slice(0, 20);
+                    }
+                    handlePassengerChange(index, "documentNumber", formatted);
+                  }}
                   disabled={passenger.isPrimary && passenger.documentNumber}
+                  type={passenger.documentType === "aadhar" ? "tel" : "text"}
                   maxLength={
                     passenger.documentType === "aadhar"
                       ? 12
@@ -564,15 +631,36 @@ export default function PassengerDetails() {
               {!passenger.isPrimary && (
                 <div className="space-y-2">
                   <Label htmlFor={`phone-${index}`}>Phone (Optional)</Label>
-                  <Input
-                    id={`phone-${index}`}
-                    type="tel"
-                    placeholder="+91 XXXXX XXXXX"
-                    value={passenger.phone}
-                    onChange={(e) =>
-                      handlePassengerChange(index, "phone", e.target.value)
-                    }
-                  />
+                  <div className="flex">
+                    <div
+                      className="flex items-center px-3 border border-r-0 rounded-l-md"
+                      style={{
+                        backgroundColor: "rgba(227, 215, 203, 0.3)",
+                        borderColor: "rgba(84, 20, 36, 0.2)",
+                      }}
+                    >
+                      <span
+                        className="text-sm font-medium"
+                        style={{ color: "rgba(84, 20, 36, 0.7)" }}
+                      >
+                        +91
+                      </span>
+                    </div>
+                    <Input
+                      id={`phone-${index}`}
+                      type="tel"
+                      placeholder="9000000000"
+                      value={passenger.phone}
+                      onChange={(e) => {
+                        const digits = e.target.value
+                          .replace(/\D/g, "")
+                          .slice(0, 10);
+                        handlePassengerChange(index, "phone", digits);
+                      }}
+                      maxLength={10}
+                      className="rounded-l-none"
+                    />
+                  </div>
                 </div>
               )}
             </div>
