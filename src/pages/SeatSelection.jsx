@@ -10,6 +10,7 @@ import {
   AlertCircle,
   FileText,
   X,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -564,7 +565,9 @@ export default function SeatSelection() {
           ? selectedSeats.length + currentSeats.length + 1
           : currentSeats.length + 1 + selectedReturnSeats.length;
         if (allSeatsCount === 1 && !lockStartTime) {
-          setLockStartTime(Date.now());
+          const startTime = Date.now();
+          setLockStartTime(startTime);
+          sessionStorage.setItem(`lock_start_${id}`, startTime.toString());
         }
       } catch (error) {
         console.error("Failed to lock seat:", error);

@@ -97,6 +97,7 @@ export default function BookingConfirmation() {
     passengers,
     tripType,
     totalPrice,
+    lockStartTime: bookingLockStartTime,
   } = bookingData || {};
 
   const isRoundTrip = tripType === "round-trip";
@@ -119,8 +120,9 @@ export default function BookingConfirmation() {
 
   // Countdown timer for seat lock
   useEffect(() => {
-    if (!dynamicTotalPrice) return; // Only use lockStartTime from sessionStorage
-
+    // Get lockStartTime from sessionStorage or booking data
+    const storedLockStartTime = sessionStorage.getItem(`lock_start_${id}`);
+    const lockStartTime = storedLockStartTime || bookingLockStartTime;
     const startTime = parseInt(lockStartTime);
     if (!startTime) return;
 
@@ -148,7 +150,7 @@ export default function BookingConfirmation() {
         clearInterval(timerRef.current);
       }
     };
-  }, [lockStartTime, dynamicTotalPrice, navigate]);
+  }, [id, bookingLockStartTime, navigate]);
 
   async function fetchInitialData() {
     try {
