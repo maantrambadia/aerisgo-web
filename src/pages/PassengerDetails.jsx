@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import {
@@ -27,6 +27,7 @@ import useDocumentTitle from "@/hooks/useDocumentTitle";
 import LoadingFallback from "@/components/LoadingFallback";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import { useSeatSocket } from "@/hooks/useSeatSocket";
 
 // Route pill component
 const RoutePill = ({ from, to }) => {
@@ -106,8 +107,55 @@ export default function PassengerDetails() {
   const isRoundTrip = tripType === "round-trip";
   const displayFlight = outboundFlight || flight;
   const displaySeats = outboundSeats || seats;
+  const allSeats = isRoundTrip
+    ? [...(outboundSeats || []), ...(returnSeats || [])]
+    : seats || [];
 
   useDocumentTitle("Passenger Details");
+
+  // Socket.IO real-time event handlers for seat unlock/expiry
+  const socketHandlers = useMemo(
+    () => ({
+      onSeatUnlocked: (data) => {
+        // Check if any of our seats were unlocked
+        const affectedSeats = allSeats.filter(
+          (seat) => seat.seatNumber === data.seatNumber
+        );
+        if (affectedSeats.length > 0) {
+          toast.error(
+            `Seat ${data.seatNumber} was released by admin. Redirecting...`
+          );
+          setTimeout(() => {
+            navigate("/");
+          }, 2000);
+        }
+      },
+      onSeatExpired: (data) => {
+        // Check if any of our seats expired
+        const affectedSeats = allSeats.filter(
+          (seat) => seat.seatNumber === data.seatNumber
+        );
+        if (affectedSeats.length > 0) {
+          toast.error(
+            `Your selection for seat ${data.seatNumber} has expired. Redirecting...`
+          );
+          setTimeout(() => {
+            navigate("/");
+          }, 2000);
+        }
+      },
+      onError: (error) => {
+        console.error("Socket error:", error);
+      },
+    }),
+    [allSeats, navigate]
+  );
+
+  // Initialize Socket.IO connection for both flights if round-trip
+  useSeatSocket(displayFlight?._id, socketHandlers);
+  if (isRoundTrip && returnFlight) {
+    useSeatSocket(returnFlight._id, socketHandlers);
+  }
 
   useEffect(() => {
     if (!displayFlight || !displaySeats) {

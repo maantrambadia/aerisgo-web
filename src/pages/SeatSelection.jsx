@@ -133,9 +133,19 @@ export default function SeatSelection() {
   const [pricingConfig, setPricingConfig] = useState(null);
   const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [hasDocuments, setHasDocuments] = useState(false);
-  const [sessionId] = useState(
-    () => `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-  );
+  const [sessionId] = useState(() => {
+    // Reuse existing sessionId from sessionStorage if available
+    const existingSessionId = sessionStorage.getItem(`seat_session_${id}`);
+    if (existingSessionId) {
+      return existingSessionId;
+    }
+    // Generate new sessionId and store it
+    const newSessionId = `session-${Date.now()}-${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+    sessionStorage.setItem(`seat_session_${id}`, newSessionId);
+    return newSessionId;
+  });
   const [outboundLockedSeats, setOutboundLockedSeats] = useState(new Map()); // Map<seatNumber, {lockedBy, expiresAt}>
   const [returnLockedSeats, setReturnLockedSeats] = useState(new Map()); // Map<seatNumber, {lockedBy, expiresAt}>
   const userUnlockingRef = useRef(new Set()); // Track seats being unlocked by user
@@ -248,30 +258,62 @@ export default function SeatSelection() {
       }
       setPricingConfig(pricingRes.data.config);
 
-      // Initialize locked seats from server for outbound
+      // Initialize locked seats from server
       const initialOutboundLocks = new Map();
+      const myOutboundSeats = []; // Track seats locked by current user
       (seatsRes.seats || []).forEach((seat) => {
         if (seat.lockedBy && seat.lockExpiresAt) {
           initialOutboundLocks.set(seat.seatNumber, {
             lockedBy: seat.lockedBy,
             expiresAt: new Date(seat.lockExpiresAt),
+            sessionId: seat.sessionId, // Store sessionId to identify our locks
           });
+          // If this seat is locked by current user, add to selected seats
+          if (seat.sessionId === sessionId) {
+            myOutboundSeats.push(seat);
+          }
         }
       });
       setOutboundLockedSeats(initialOutboundLocks);
+      // Restore selected seats if they were locked by current user
+      if (myOutboundSeats.length > 0) {
+        setSelectedSeats(myOutboundSeats);
+        // Restore timer if it was previously started
+        const storedLockStartTime = sessionStorage.getItem(`lock_start_${id}`);
+        if (storedLockStartTime && !lockStartTime) {
+          setLockStartTime(parseInt(storedLockStartTime));
+        }
+      }
 
       // Initialize locked seats from server for return flight if round-trip
       if (returnSeatsRes) {
         const initialReturnLocks = new Map();
+        const myReturnSeats = []; // Track seats locked by current user
         (returnSeatsRes.seats || []).forEach((seat) => {
           if (seat.lockedBy && seat.lockExpiresAt) {
             initialReturnLocks.set(seat.seatNumber, {
               lockedBy: seat.lockedBy,
               expiresAt: new Date(seat.lockExpiresAt),
+              sessionId: seat.sessionId, // Store sessionId to identify our locks
             });
+            // If this seat is locked by current user, add to selected seats
+            if (seat.sessionId === sessionId) {
+              myReturnSeats.push(seat);
+            }
           }
         });
         setReturnLockedSeats(initialReturnLocks);
+        // Restore selected seats if they were locked by current user
+        if (myReturnSeats.length > 0) {
+          setSelectedReturnSeats(myReturnSeats);
+          // Restore timer if it was previously started
+          const storedLockStartTime = sessionStorage.getItem(
+            `lock_start_${id}`
+          );
+          if (storedLockStartTime && !lockStartTime) {
+            setLockStartTime(parseInt(storedLockStartTime));
+          }
+        }
       }
       setLoading(false);
     } catch (err) {
@@ -340,6 +382,7 @@ export default function SeatSelection() {
           newLocks.set(data.seatNumber, {
             lockedBy: data.lockedBy,
             expiresAt: new Date(data.lockExpiresAt),
+            sessionId: data.sessionId, // Include sessionId from socket event
           });
           return newLocks;
         });
@@ -364,13 +407,34 @@ export default function SeatSelection() {
         );
         if (wasSelected) {
           if (showingReturnSeats) {
-            setSelectedReturnSeats((prev) =>
-              prev.filter((s) => s.seatNumber !== data.seatNumber)
-            );
+            setSelectedReturnSeats((prev) => {
+              const newSeats = prev.filter(
+                (s) => s.seatNumber !== data.seatNumber
+              );
+              // Reset timer if all seats are removed
+              const allSeatsCount = selectedSeats.length + newSeats.length;
+              if (allSeatsCount === 0) {
+                setLockStartTime(null);
+                setTimeRemaining(600);
+                sessionStorage.removeItem(`lock_start_${id}`);
+              }
+              return newSeats;
+            });
           } else {
-            setSelectedSeats((prev) =>
-              prev.filter((s) => s.seatNumber !== data.seatNumber)
-            );
+            setSelectedSeats((prev) => {
+              const newSeats = prev.filter(
+                (s) => s.seatNumber !== data.seatNumber
+              );
+              // Reset timer if all seats are removed
+              const allSeatsCount =
+                newSeats.length + selectedReturnSeats.length;
+              if (allSeatsCount === 0) {
+                setLockStartTime(null);
+                setTimeRemaining(600);
+                sessionStorage.removeItem(`lock_start_${id}`);
+              }
+              return newSeats;
+            });
           }
           // Only show message if we didn't unlock it ourselves
           const wasUserInitiated = userUnlockingRef.current.has(
@@ -435,13 +499,34 @@ export default function SeatSelection() {
             `Your selection for seat ${data.seatNumber} has expired`
           );
           if (showingReturnSeats) {
-            setSelectedReturnSeats((prev) =>
-              prev.filter((s) => s.seatNumber !== data.seatNumber)
-            );
+            setSelectedReturnSeats((prev) => {
+              const newSeats = prev.filter(
+                (s) => s.seatNumber !== data.seatNumber
+              );
+              // Reset timer if all seats are removed
+              const allSeatsCount = selectedSeats.length + newSeats.length;
+              if (allSeatsCount === 0) {
+                setLockStartTime(null);
+                setTimeRemaining(600);
+                sessionStorage.removeItem(`lock_start_${id}`);
+              }
+              return newSeats;
+            });
           } else {
-            setSelectedSeats((prev) =>
-              prev.filter((s) => s.seatNumber !== data.seatNumber)
-            );
+            setSelectedSeats((prev) => {
+              const newSeats = prev.filter(
+                (s) => s.seatNumber !== data.seatNumber
+              );
+              // Reset timer if all seats are removed
+              const allSeatsCount =
+                newSeats.length + selectedReturnSeats.length;
+              if (allSeatsCount === 0) {
+                setLockStartTime(null);
+                setTimeRemaining(600);
+                sessionStorage.removeItem(`lock_start_${id}`);
+              }
+              return newSeats;
+            });
           }
         }
       },
@@ -701,10 +786,8 @@ export default function SeatSelection() {
       return { isLocked: false, isLockedByMe: false };
     }
 
-    // Check if locked by current user (by checking if it's in current selected seats)
-    const isLockedByMe = currentSelectedSeats.some(
-      (s) => s.seatNumber === seatNumber
-    );
+    // Check if locked by current user by comparing sessionId
+    const isLockedByMe = lock.sessionId === sessionId;
     return { isLocked: true, isLockedByMe };
   };
 
