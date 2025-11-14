@@ -22,6 +22,7 @@ const Account = lazy(() => import("@/pages/Account.jsx"));
 const CheckIn = lazy(() => import("@/pages/CheckIn.jsx"));
 const MealSelection = lazy(() => import("@/pages/MealSelection.jsx"));
 const BaggageSelection = lazy(() => import("@/pages/BaggageSelection.jsx"));
+const Notifications = lazy(() => import("@/pages/Notifications.jsx"));
 
 const router = createBrowserRouter([
   {
@@ -86,6 +87,16 @@ const router = createBrowserRouter([
       <RequireAuth>
         <Suspense fallback={<LoadingFallback />}>
           <Account />
+        </Suspense>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/notifications",
+    element: (
+      <RequireAuth>
+        <Suspense fallback={<LoadingFallback />}>
+          <Notifications />
         </Suspense>
       </RequireAuth>
     ),

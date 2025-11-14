@@ -23,6 +23,7 @@ import {
   LogOut,
   LogIn,
   UserPlus,
+  Bell,
 } from "lucide-react";
 
 export default function Home() {
@@ -116,6 +117,15 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 {user ? (
                   <>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="rounded-full"
+                      aria-label="View notifications"
+                      onClick={() => navigate("/notifications")}
+                    >
+                      <Bell className="w-4 h-4" />
+                    </Button>
                     <Link to="/account">
                       <Button
                         variant="default"

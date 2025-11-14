@@ -13,6 +13,7 @@ import {
   LogOut,
   Phone,
   UserCircle,
+  Bell,
 } from "lucide-react";
 import useDocumentTitle from "@/hooks/useDocumentTitle";
 import TicketsTab from "@/components/account/TicketsTab";
@@ -60,6 +61,22 @@ export default function Account() {
                 />
               </Link>
               <div className="flex items-center gap-2">
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="icon"
+                    className="rounded-full"
+                    aria-label="View notifications"
+                  >
+                    <Link to="/notifications">
+                      <Bell className="w-4 h-4" />
+                    </Link>
+                  </Button>
+                </motion.div>
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
