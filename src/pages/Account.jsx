@@ -14,11 +14,13 @@ import {
   Phone,
   UserCircle,
   Bell,
+  HelpCircle,
 } from "lucide-react";
 import useDocumentTitle from "@/hooks/useDocumentTitle";
 import TicketsTab from "@/components/account/TicketsTab";
 import RewardsTab from "@/components/account/RewardsTab";
 import ProfileTab from "@/components/account/ProfileTab";
+import FAQsTab from "@/components/account/FAQsTab";
 
 export default function Account() {
   const { user, logout } = useAuth();
@@ -165,7 +167,7 @@ export default function Account() {
             onValueChange={setActiveTab}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-3 mb-6 sm:mb-8">
+            <TabsList className="grid w-full grid-cols-4 mb-6 sm:mb-8">
               <TabsTrigger
                 value="tickets"
                 className="gap-1 sm:gap-2 text-xs sm:text-sm"
@@ -188,6 +190,13 @@ export default function Account() {
                 <User className="w-4 h-4" />
                 <span>Profile</span>
               </TabsTrigger>
+              <TabsTrigger
+                value="faqs"
+                className="gap-1 sm:gap-2 text-xs sm:text-sm"
+              >
+                <HelpCircle className="w-4 h-4" />
+                <span>FAQs</span>
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="tickets">
@@ -200,6 +209,10 @@ export default function Account() {
 
             <TabsContent value="profile">
               <ProfileTab />
+            </TabsContent>
+
+            <TabsContent value="faqs">
+              <FAQsTab />
             </TabsContent>
           </Tabs>
         </motion.div>
