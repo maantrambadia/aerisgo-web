@@ -54,8 +54,10 @@ const SeatButton = ({
   rowClass,
   isLocked,
   isLockedByMe,
+  isLoading,
 }) => {
   const getSeatColor = () => {
+    if (isLoading) return "#f59e0b"; // Amber - Loading state
     if (selected || isLockedByMe) return "#541424"; // Primary - Selected by me
     if (isLocked) return "#f97316"; // Orange - Locked by someone else
     if (!seat.isAvailable) return "#dc2626"; // Red - Occupied
@@ -66,6 +68,7 @@ const SeatButton = ({
   };
 
   const getBorderColor = () => {
+    if (isLoading) return "#d97706"; // Darker amber for loading
     if (selected || isLockedByMe) return "#6b1a2f";
     if (isLocked) return "#ea580c";
     if (!seat.isAvailable) return "#991b1b";
@@ -76,6 +79,7 @@ const SeatButton = ({
   };
 
   const handleClick = () => {
+    if (isLoading) return; // Prevent double-click while loading
     if (!seat.isAvailable) {
       toast.error("This seat is already booked");
       return;
@@ -89,18 +93,21 @@ const SeatButton = ({
 
   return (
     <motion.button
-      whileHover={{ scale: seat.isAvailable ? 1.1 : 1 }}
-      whileTap={{ scale: seat.isAvailable ? 0.95 : 1 }}
+      whileHover={{ scale: seat.isAvailable && !isLoading ? 1.1 : 1 }}
+      whileTap={{ scale: seat.isAvailable && !isLoading ? 0.95 : 1 }}
       onClick={handleClick}
-      disabled={!seat.isAvailable}
+      disabled={!seat.isAvailable || isLoading}
       className="w-11 h-11 rounded-xl flex flex-col items-center justify-center border-2 transition-all"
       style={{
         backgroundColor: getSeatColor(),
         borderColor: getBorderColor(),
-        cursor: seat.isAvailable ? "pointer" : "not-allowed",
+        cursor: seat.isAvailable && !isLoading ? "pointer" : "not-allowed",
+        opacity: isLoading ? 0.8 : 1,
       }}
       title={
-        !seat.isAvailable
+        isLoading
+          ? `${seat.seatNumber} - Processing...`
+          : !seat.isAvailable
           ? `${seat.seatNumber} - Booked`
           : isLocked && !isLockedByMe
           ? `${seat.seatNumber} - Locked by another user`
@@ -109,13 +116,42 @@ const SeatButton = ({
           : `${seat.seatNumber} - Available`
       }
     >
-      <Armchair className="h-4 w-4" style={{ color: "#e3d7cb" }} />
-      <span
-        className="text-[9px] font-bold mt-0.5"
-        style={{ color: "#e3d7cb" }}
-      >
-        {seat.seatNumber.match(/[A-F]/)}
-      </span>
+      {isLoading ? (
+        <div className="animate-spin">
+          <svg
+            className="h-4 w-4"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+              style={{ color: "#e3d7cb" }}
+            ></circle>
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              style={{ color: "#e3d7cb" }}
+            ></path>
+          </svg>
+        </div>
+      ) : (
+        <>
+          <Armchair className="h-4 w-4" style={{ color: "#e3d7cb" }} />
+          <span
+            className="text-[9px] font-bold mt-0.5"
+            style={{ color: "#e3d7cb" }}
+          >
+            {seat.seatNumber.match(/[A-F]/)}
+          </span>
+        </>
+      )}
     </motion.button>
   );
 };
@@ -152,6 +188,7 @@ export default function SeatSelection() {
   const [lockStartTime, setLockStartTime] = useState(null); // Track when first seat was locked
   const [timeRemaining, setTimeRemaining] = useState(600); // 10 minutes in seconds
   const timerRef = useRef(null);
+  const [lockingSeats, setLockingSeats] = useState(new Set()); // Track seats being locked/unlocked
 
   // Get the appropriate locked seats map based on current view
   const lockedSeats = showingReturnSeats
@@ -591,16 +628,19 @@ export default function SeatSelection() {
     );
 
     if (isAlreadySelected) {
-      // Unlock the seat
+      // Unlock the seat - Optimistic UI
+      // Show loading state
+      setLockingSeats((prev) => {
+        const next = new Set(prev);
+        next.add(seat.seatNumber);
+        return next;
+      });
+
       try {
         // Mark this seat as being unlocked by user
         userUnlockingRef.current.add(seat.seatNumber);
 
-        await unlockSeat({
-          flightId: currentFlightId,
-          seatNumber: seat.seatNumber,
-          sessionId,
-        });
+        // Optimistic update - remove immediately
         const newSeats = currentSeats.filter(
           (s) => s.seatNumber !== seat.seatNumber
         );
@@ -613,7 +653,15 @@ export default function SeatSelection() {
         if (allSeatsCount === 0) {
           setLockStartTime(null);
           setTimeRemaining(600);
+          sessionStorage.removeItem(`lock_start_${id}`);
         }
+
+        // Then sync with server
+        await unlockSeat({
+          flightId: currentFlightId,
+          seatNumber: seat.seatNumber,
+          sessionId,
+        });
 
         // Remove from tracking after a short delay
         setTimeout(() => {
@@ -621,7 +669,21 @@ export default function SeatSelection() {
         }, 1000);
       } catch (error) {
         console.error("Failed to unlock seat:", error);
+        // Rollback - add seat back
+        setCurrentSeats((prev) => [...prev, seat]);
+        // Restore timer if needed
+        if (currentSeats.length === 1 && !lockStartTime) {
+          const startTime = Date.now();
+          setLockStartTime(startTime);
+          sessionStorage.setItem(`lock_start_${id}`, startTime.toString());
+        }
         toast.error("Failed to deselect seat");
+      } finally {
+        setLockingSeats((prev) => {
+          const next = new Set(prev);
+          next.delete(seat.seatNumber);
+          return next;
+        });
       }
     } else {
       if (currentSeats.length >= maxSeats) {
@@ -629,20 +691,16 @@ export default function SeatSelection() {
         return;
       }
 
-      // Lock the seat
+      // Lock the seat - Optimistic UI
+      // Show loading state
+      setLockingSeats((prev) => {
+        const next = new Set(prev);
+        next.add(seat.seatNumber);
+        return next;
+      });
+
       try {
-        // Only pass previousSeat if we're at max capacity (replacing a seat)
-        // For multiple passengers, don't unlock previous seats
-        const previousSeat =
-          currentSeats.length >= maxSeats
-            ? currentSeats[0].seatNumber
-            : undefined;
-        await lockSeat({
-          flightId: currentFlightId,
-          seatNumber: seat.seatNumber,
-          sessionId,
-          previousSeat,
-        });
+        // Optimistic update - add immediately
         setCurrentSeats([...currentSeats, seat]);
 
         // Start timer when first seat is selected
@@ -654,12 +712,46 @@ export default function SeatSelection() {
           setLockStartTime(startTime);
           sessionStorage.setItem(`lock_start_${id}`, startTime.toString());
         }
+
+        // Then sync with server
+        const previousSeat =
+          currentSeats.length >= maxSeats
+            ? currentSeats[0].seatNumber
+            : undefined;
+        await lockSeat({
+          flightId: currentFlightId,
+          seatNumber: seat.seatNumber,
+          sessionId,
+          previousSeat,
+        });
       } catch (error) {
         console.error("Failed to lock seat:", error);
+
+        // Rollback - remove seat
+        setCurrentSeats((prev) =>
+          prev.filter((s) => s.seatNumber !== seat.seatNumber)
+        );
+
+        // Reset timer if this was the only seat
+        const allSeatsCount = showingReturnSeats
+          ? selectedSeats.length + currentSeats.length
+          : currentSeats.length + selectedReturnSeats.length;
+        if (allSeatsCount === 0) {
+          setLockStartTime(null);
+          setTimeRemaining(600);
+          sessionStorage.removeItem(`lock_start_${id}`);
+        }
+
         const message =
           error.response?.data?.message ||
           "Failed to select seat. It may be locked by another user.";
         toast.error(message);
+      } finally {
+        setLockingSeats((prev) => {
+          const next = new Set(prev);
+          next.delete(seat.seatNumber);
+          return next;
+        });
       }
     }
   }
@@ -1142,6 +1234,7 @@ export default function SeatSelection() {
                             rowClass={rowClass}
                             isLocked={lockStatus.isLocked}
                             isLockedByMe={lockStatus.isLockedByMe}
+                            isLoading={lockingSeats.has(seat.seatNumber)}
                           />
                         );
                       })}
@@ -1162,6 +1255,7 @@ export default function SeatSelection() {
                             rowClass={rowClass}
                             isLocked={lockStatus.isLocked}
                             isLockedByMe={lockStatus.isLockedByMe}
+                            isLoading={lockingSeats.has(seat.seatNumber)}
                           />
                         );
                       })}
@@ -1182,6 +1276,7 @@ export default function SeatSelection() {
                             rowClass={rowClass}
                             isLocked={lockStatus.isLocked}
                             isLockedByMe={lockStatus.isLockedByMe}
+                            isLoading={lockingSeats.has(seat.seatNumber)}
                           />
                         );
                       })}
@@ -1212,6 +1307,7 @@ export default function SeatSelection() {
                             rowClass={rowClass}
                             isLocked={lockStatus.isLocked}
                             isLockedByMe={lockStatus.isLockedByMe}
+                            isLoading={lockingSeats.has(seat.seatNumber)}
                           />
                         );
                       })}
@@ -1232,6 +1328,7 @@ export default function SeatSelection() {
                             rowClass={rowClass}
                             isLocked={lockStatus.isLocked}
                             isLockedByMe={lockStatus.isLockedByMe}
+                            isLoading={lockingSeats.has(seat.seatNumber)}
                           />
                         );
                       })}
@@ -1252,6 +1349,7 @@ export default function SeatSelection() {
                             rowClass={rowClass}
                             isLocked={lockStatus.isLocked}
                             isLockedByMe={lockStatus.isLockedByMe}
+                            isLoading={lockingSeats.has(seat.seatNumber)}
                           />
                         );
                       })}
