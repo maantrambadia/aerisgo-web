@@ -61,7 +61,29 @@ export function AuthProvider({ children }) {
       toast.success("Signed in successfully!");
       return data.user;
     } catch (err) {
+      const reason = err?.response?.data?.reason;
       const msg = err?.response?.data?.message || "Login failed";
+
+      // Handle not verified user
+      if (reason === "not_verified") {
+        // Store email for OTP verification page
+        localStorage.setItem("pending_verification_email", email);
+
+        // Resend OTP
+        try {
+          await api.post("/auth/email/otp/resend", { email });
+          toast.success("Verification code sent to your email");
+        } catch (resendErr) {
+          console.error("Failed to resend OTP:", resendErr);
+        }
+
+        // Throw error with reason so SignInForm can redirect
+        const error = new Error("not_verified");
+        error.reason = "not_verified";
+        error.email = email;
+        throw error;
+      }
+
       if (msg !== "Invalid role") {
         toast.error(msg);
       }

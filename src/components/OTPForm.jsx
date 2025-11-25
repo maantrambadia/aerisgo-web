@@ -18,7 +18,10 @@ export function OTPForm({ className, ...props }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { refresh } = useAuth();
-  const email = location.state?.email || "";
+  const email =
+    location.state?.email ||
+    localStorage.getItem("pending_verification_email") ||
+    "";
 
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,6 +48,9 @@ export function OTPForm({ className, ...props }) {
         localStorage.setItem("aerisgo_token", data.token);
         localStorage.setItem("aerisgo_user", JSON.stringify(data.user));
 
+        // Clear pending verification email
+        localStorage.removeItem("pending_verification_email");
+
         // Refresh auth state to update user in context
         await refresh();
 
@@ -52,6 +58,7 @@ export function OTPForm({ className, ...props }) {
         navigate("/", { replace: true });
       } else {
         // Fallback if no token (shouldn't happen)
+        localStorage.removeItem("pending_verification_email");
         toast.success(data.message || "Email verified successfully!");
         navigate("/sign-in");
       }

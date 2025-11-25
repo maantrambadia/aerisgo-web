@@ -45,7 +45,15 @@ export function SignInForm({ className, ...props }) {
         navigate("/", { replace: true });
       }
     } catch (error) {
-      // Error already handled in AuthContext
+      // Handle not verified user - redirect to OTP verification
+      if (error.reason === "not_verified") {
+        navigate("/verify-otp", {
+          state: { email: formData.email },
+          replace: true,
+        });
+        return;
+      }
+      // Other errors already handled in AuthContext
     } finally {
       setLoading(false);
     }
