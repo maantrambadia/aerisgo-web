@@ -11,6 +11,8 @@ import {
   Clock,
   Check,
   ShieldCheck,
+  User,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +75,12 @@ export default function BookingConfirmation() {
   const [pointsEarned, setPointsEarned] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState(1200); // 20 minutes in seconds
   const timerRef = useRef(null);
+
+  // Card payment form state
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardName, setCardName] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [cvv, setCvv] = useState("");
 
   // Get booking data from sessionStorage
   const getBookingData = () => {
@@ -362,6 +370,24 @@ export default function BookingConfirmation() {
   }
 
   async function handlePayment() {
+    // Validate card details
+    if (!cardNumber || cardNumber.replace(/\s/g, "").length < 13) {
+      toast.error("Please enter a valid card number");
+      return;
+    }
+    if (!cardName || cardName.trim().length < 3) {
+      toast.error("Please enter cardholder name");
+      return;
+    }
+    if (!expiryDate || expiryDate.length !== 5) {
+      toast.error("Please enter expiry date (MM/YY)");
+      return;
+    }
+    if (!cvv || cvv.length < 3) {
+      toast.error("Please enter CVV");
+      return;
+    }
+
     setShowPaymentModal(false);
     setProcessing(true);
 
@@ -1442,6 +1468,155 @@ export default function BookingConfirmation() {
                       </div>
                       <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
                         <Check className="h-4 w-4 text-white" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card Details Form */}
+                <div className="mb-6">
+                  <h3
+                    className="font-bold text-base mb-3"
+                    style={{ color: "#541424" }}
+                  >
+                    Card Details
+                  </h3>
+
+                  {/* Card Number */}
+                  <div className="mb-4">
+                    <label
+                      className="block font-semibold text-sm mb-2"
+                      style={{ color: "#541424" }}
+                    >
+                      Card Number
+                    </label>
+                    <div
+                      className="flex items-center gap-3 border-2 rounded-[16px] px-4 py-3"
+                      style={{ borderColor: "rgba(84, 20, 36, 0.2)" }}
+                    >
+                      <CreditCard
+                        className="h-5 w-5"
+                        style={{ color: "#541424" }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="1234 5678 9012 3456"
+                        className="flex-1 outline-none font-medium text-base"
+                        style={{ color: "#541424" }}
+                        value={cardNumber}
+                        onChange={(e) => {
+                          const cleaned = e.target.value.replace(/\D/g, "");
+                          const formatted =
+                            cleaned.match(/.{1,4}/g)?.join(" ") || cleaned;
+                          setCardNumber(formatted.slice(0, 19));
+                        }}
+                        maxLength={19}
+                        onKeyPress={(e) => {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Cardholder Name */}
+                  <div className="mb-4">
+                    <label
+                      className="block font-semibold text-sm mb-2"
+                      style={{ color: "#541424" }}
+                    >
+                      Cardholder Name
+                    </label>
+                    <div
+                      className="flex items-center gap-3 border-2 rounded-[16px] px-4 py-3"
+                      style={{ borderColor: "rgba(84, 20, 36, 0.2)" }}
+                    >
+                      <User className="h-5 w-5" style={{ color: "#541424" }} />
+                      <input
+                        type="text"
+                        placeholder="JOHN DOE"
+                        className="flex-1 outline-none font-medium text-base uppercase"
+                        style={{ color: "#541424" }}
+                        value={cardName}
+                        onChange={(e) => {
+                          // Only allow letters and spaces
+                          const cleaned = e.target.value.replace(
+                            /[^a-zA-Z\s]/g,
+                            ""
+                          );
+                          setCardName(cleaned.toUpperCase());
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Expiry Date and CVV */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label
+                        className="block font-semibold text-sm mb-2"
+                        style={{ color: "#541424" }}
+                      >
+                        Expiry Date
+                      </label>
+                      <div
+                        className="flex items-center gap-3 border-2 rounded-[16px] px-4 py-3"
+                        style={{ borderColor: "rgba(84, 20, 36, 0.2)" }}
+                      >
+                        <Calendar
+                          className="h-5 w-5"
+                          style={{ color: "#541424" }}
+                        />
+                        <input
+                          type="text"
+                          placeholder="MM/YY"
+                          className="flex-1 outline-none font-medium text-base"
+                          style={{ color: "#541424" }}
+                          value={expiryDate}
+                          onChange={(e) => {
+                            const cleaned = e.target.value.replace(/\D/g, "");
+                            if (cleaned.length >= 2) {
+                              setExpiryDate(
+                                cleaned.slice(0, 2) + "/" + cleaned.slice(2, 4)
+                              );
+                            } else {
+                              setExpiryDate(cleaned);
+                            }
+                          }}
+                          maxLength={5}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label
+                        className="block font-semibold text-sm mb-2"
+                        style={{ color: "#541424" }}
+                      >
+                        CVV
+                      </label>
+                      <div
+                        className="flex items-center gap-3 border-2 rounded-[16px] px-4 py-3"
+                        style={{ borderColor: "rgba(84, 20, 36, 0.2)" }}
+                      >
+                        <Lock
+                          className="h-5 w-5"
+                          style={{ color: "#541424" }}
+                        />
+                        <input
+                          type="password"
+                          placeholder="123"
+                          className="flex-1 outline-none font-medium text-base"
+                          style={{ color: "#541424" }}
+                          value={cvv}
+                          onChange={(e) =>
+                            setCvv(
+                              e.target.value.replace(/\D/g, "").slice(0, 4)
+                            )
+                          }
+                          maxLength={4}
+                        />
                       </div>
                     </div>
                   </div>
