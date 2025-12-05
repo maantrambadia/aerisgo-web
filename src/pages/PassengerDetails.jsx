@@ -75,7 +75,7 @@ export default function PassengerDetails() {
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState(null);
   const [passengers, setPassengers] = useState([]);
-  const [timeRemaining, setTimeRemaining] = useState(600);
+  const [timeRemaining, setTimeRemaining] = useState(1200);
   const timerRef = useRef(null);
 
   // Get booking data from sessionStorage
@@ -173,7 +173,7 @@ export default function PassengerDetails() {
     const startTime = parseInt(lockStartTime);
     const updateTimer = () => {
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      const remaining = Math.max(0, 600 - elapsed);
+      const remaining = Math.max(0, 1200 - elapsed);
       setTimeRemaining(remaining);
 
       if (remaining === 0) {

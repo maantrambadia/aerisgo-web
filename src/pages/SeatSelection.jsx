@@ -186,7 +186,7 @@ export default function SeatSelection() {
   const [returnLockedSeats, setReturnLockedSeats] = useState(new Map()); // Map<seatNumber, {lockedBy, expiresAt}>
   const userUnlockingRef = useRef(new Set()); // Track seats being unlocked by user
   const [lockStartTime, setLockStartTime] = useState(null); // Track when first seat was locked
-  const [timeRemaining, setTimeRemaining] = useState(600); // 10 minutes in seconds
+  const [timeRemaining, setTimeRemaining] = useState(1200); // 20 minutes in seconds
   const timerRef = useRef(null);
   const [lockingSeats, setLockingSeats] = useState(new Set()); // Track seats being locked/unlocked
 
@@ -374,7 +374,7 @@ export default function SeatSelection() {
 
     const updateTimer = () => {
       const elapsed = Math.floor((Date.now() - lockStartTime) / 1000);
-      const remaining = Math.max(0, 600 - elapsed);
+      const remaining = Math.max(0, 1200 - elapsed);
       setTimeRemaining(remaining);
 
       if (remaining === 0) {
@@ -452,7 +452,7 @@ export default function SeatSelection() {
               const allSeatsCount = selectedSeats.length + newSeats.length;
               if (allSeatsCount === 0) {
                 setLockStartTime(null);
-                setTimeRemaining(600);
+                setTimeRemaining(1200);
                 sessionStorage.removeItem(`lock_start_${id}`);
               }
               return newSeats;
@@ -467,7 +467,7 @@ export default function SeatSelection() {
                 newSeats.length + selectedReturnSeats.length;
               if (allSeatsCount === 0) {
                 setLockStartTime(null);
-                setTimeRemaining(600);
+                setTimeRemaining(1200);
                 sessionStorage.removeItem(`lock_start_${id}`);
               }
               return newSeats;
@@ -544,7 +544,7 @@ export default function SeatSelection() {
               const allSeatsCount = selectedSeats.length + newSeats.length;
               if (allSeatsCount === 0) {
                 setLockStartTime(null);
-                setTimeRemaining(600);
+                setTimeRemaining(1200);
                 sessionStorage.removeItem(`lock_start_${id}`);
               }
               return newSeats;
@@ -559,7 +559,7 @@ export default function SeatSelection() {
                 newSeats.length + selectedReturnSeats.length;
               if (allSeatsCount === 0) {
                 setLockStartTime(null);
-                setTimeRemaining(600);
+                setTimeRemaining(1200);
                 sessionStorage.removeItem(`lock_start_${id}`);
               }
               return newSeats;
@@ -652,7 +652,7 @@ export default function SeatSelection() {
           : newSeats.length + selectedReturnSeats.length;
         if (allSeatsCount === 0) {
           setLockStartTime(null);
-          setTimeRemaining(600);
+          setTimeRemaining(1200);
           sessionStorage.removeItem(`lock_start_${id}`);
         }
 
@@ -738,7 +738,7 @@ export default function SeatSelection() {
           : currentSeats.length + selectedReturnSeats.length;
         if (allSeatsCount === 0) {
           setLockStartTime(null);
-          setTimeRemaining(600);
+          setTimeRemaining(1200);
           sessionStorage.removeItem(`lock_start_${id}`);
         }
 
