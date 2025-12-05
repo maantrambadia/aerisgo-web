@@ -45,6 +45,14 @@ export function SignInForm({ className, ...props }) {
         navigate("/", { replace: true });
       }
     } catch (error) {
+      // Handle user not found - redirect to sign-up
+      if (error.redirectToSignUp) {
+        setTimeout(() => {
+          navigate("/sign-up", { replace: true });
+        }, 1500);
+        return;
+      }
+
       // Handle not verified user - redirect to OTP verification
       if (error.reason === "not_verified") {
         navigate("/verify-otp", {

@@ -61,8 +61,27 @@ export function AuthProvider({ children }) {
       toast.success("Signed in successfully!");
       return data.user;
     } catch (err) {
+      const status = err?.response?.status;
       const reason = err?.response?.data?.reason;
+      const field = err?.response?.data?.field;
+      const userNotFound = err?.response?.data?.userNotFound;
       const msg = err?.response?.data?.message || "Login failed";
+
+      // User doesn't exist - redirect to sign-up
+      if (status === 404 && userNotFound) {
+        toast.error(
+          "No account found with this email. Redirecting to sign up..."
+        );
+        const error = new Error("user_not_found");
+        error.redirectToSignUp = true;
+        throw error;
+      }
+
+      // Incorrect password
+      if (status === 401 && field === "password") {
+        toast.error("Incorrect password. Please try again.");
+        throw err;
+      }
 
       // Handle not verified user
       if (reason === "not_verified") {
