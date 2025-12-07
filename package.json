@@ -1,5 +1,6 @@
 {
   "name": "aerisgo-web",
+  "license": "MIT",
   "private": true,
   "version": "1.0.5",
   "type": "module",
