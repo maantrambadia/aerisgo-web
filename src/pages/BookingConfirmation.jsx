@@ -127,11 +127,11 @@ export default function BookingConfirmation() {
       onSeatUnlocked: (data) => {
         // Check if any of our seats were unlocked
         const affectedSeats = allSeats.filter(
-          (seat) => seat.seatNumber === data.seatNumber
+          (seat) => seat.seatNumber === data.seatNumber,
         );
         if (affectedSeats.length > 0) {
           toast.error(
-            `Seat ${data.seatNumber} was released by admin. Redirecting...`
+            `Seat ${data.seatNumber} was released by admin. Redirecting...`,
           );
           setTimeout(() => {
             navigate("/");
@@ -141,11 +141,11 @@ export default function BookingConfirmation() {
       onSeatExpired: (data) => {
         // Check if any of our seats expired
         const affectedSeats = allSeats.filter(
-          (seat) => seat.seatNumber === data.seatNumber
+          (seat) => seat.seatNumber === data.seatNumber,
         );
         if (affectedSeats.length > 0) {
           toast.error(
-            `Your selection for seat ${data.seatNumber} has expired. Redirecting...`
+            `Your selection for seat ${data.seatNumber} has expired. Redirecting...`,
           );
           setTimeout(() => {
             navigate("/");
@@ -156,7 +156,7 @@ export default function BookingConfirmation() {
         console.error("Socket error:", error);
       },
     }),
-    [allSeats, navigate]
+    [allSeats, navigate],
   );
 
   // Initialize Socket.IO connection for both flights if round-trip
@@ -190,7 +190,7 @@ export default function BookingConfirmation() {
       if (remaining === 0) {
         clearInterval(timerRef.current);
         toast.error(
-          "Time expired! Your seat selection has expired. Please select again."
+          "Time expired! Your seat selection has expired. Please select again.",
         );
         setTimeout(() => {
           navigate("/");
@@ -438,14 +438,14 @@ export default function BookingConfirmation() {
       if (err?.response?.data?.requiresDocument) {
         toast.error(
           err?.response?.data?.message ||
-            "Please add your identification document"
+            "Please add your identification document",
         );
         setTimeout(() => {
           navigate("/account?tab=profile");
         }, 2000);
       } else {
         toast.error(
-          err?.response?.data?.message || "Failed to complete booking"
+          err?.response?.data?.message || "Failed to complete booking",
         );
       }
       setProcessing(false);
@@ -761,7 +761,7 @@ export default function BookingConfirmation() {
             >
               {calculateDuration(
                 displayFlight.departureTime,
-                displayFlight.arrivalTime
+                displayFlight.arrivalTime,
               )}
             </p>
 
@@ -910,7 +910,7 @@ export default function BookingConfirmation() {
               >
                 {calculateDuration(
                   returnFlight.departureTime,
-                  returnFlight.arrivalTime
+                  returnFlight.arrivalTime,
                 )}
               </p>
 
@@ -1346,7 +1346,7 @@ export default function BookingConfirmation() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/30"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 px-4 sm:items-center"
             onClick={() => !processing && setShowPaymentModal(false)}
           >
             <motion.div
@@ -1354,11 +1354,11 @@ export default function BookingConfirmation() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="w-full max-w-2xl bg-background rounded-t-[32px] border-t-2"
+              className="w-full max-w-2xl bg-background rounded-t-[32px] border-t-2 sm:rounded-[32px] sm:border-2 sm:mb-6 max-h-[90svh] overflow-y-auto"
               style={{ borderColor: "rgba(84, 20, 36, 0.1)" }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-6 pb-8">
+              <div className="p-4 sm:p-6 pb-6 sm:pb-8">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                   <h2
@@ -1385,7 +1385,7 @@ export default function BookingConfirmation() {
                     borderColor: "rgba(84, 20, 36, 0.15)",
                   }}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p
                         className="font-medium text-sm mb-1"
@@ -1405,7 +1405,7 @@ export default function BookingConfirmation() {
                       </p>
                     </div>
                     <div
-                      className="w-16 h-16 rounded-full flex items-center justify-center"
+                      className="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center self-start sm:self-auto"
                       style={{ backgroundColor: "rgba(84, 20, 36, 0.1)" }}
                     >
                       <CreditCard
@@ -1442,9 +1442,9 @@ export default function BookingConfirmation() {
                       borderColor: "rgba(84, 20, 36, 0.2)",
                     }}
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-4">
                       <div
-                        className="w-14 h-14 rounded-full flex items-center justify-center"
+                        className="w-14 h-14 rounded-full flex items-center justify-center shrink-0"
                         style={{ backgroundColor: "rgba(227, 215, 203, 0.15)" }}
                       >
                         <CreditCard
@@ -1452,7 +1452,7 @@ export default function BookingConfirmation() {
                           style={{ color: "#e3d7cb" }}
                         />
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <p
                           className="font-bold text-base"
                           style={{ color: "#e3d7cb" }}
@@ -1466,7 +1466,7 @@ export default function BookingConfirmation() {
                           Secure payment gateway
                         </p>
                       </div>
-                      <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center self-start sm:self-auto shrink-0">
                         <Check className="h-4 w-4 text-white" />
                       </div>
                     </div>
@@ -1543,7 +1543,7 @@ export default function BookingConfirmation() {
                           // Only allow letters and spaces
                           const cleaned = e.target.value.replace(
                             /[^a-zA-Z\s]/g,
-                            ""
+                            "",
                           );
                           setCardName(cleaned.toUpperCase());
                         }}
@@ -1552,7 +1552,7 @@ export default function BookingConfirmation() {
                   </div>
 
                   {/* Expiry Date and CVV */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label
                         className="block font-semibold text-sm mb-2"
@@ -1578,7 +1578,7 @@ export default function BookingConfirmation() {
                             const cleaned = e.target.value.replace(/\D/g, "");
                             if (cleaned.length >= 2) {
                               setExpiryDate(
-                                cleaned.slice(0, 2) + "/" + cleaned.slice(2, 4)
+                                cleaned.slice(0, 2) + "/" + cleaned.slice(2, 4),
                               );
                             } else {
                               setExpiryDate(cleaned);
@@ -1612,7 +1612,7 @@ export default function BookingConfirmation() {
                           value={cvv}
                           onChange={(e) =>
                             setCvv(
-                              e.target.value.replace(/\D/g, "").slice(0, 4)
+                              e.target.value.replace(/\D/g, "").slice(0, 4),
                             )
                           }
                           maxLength={4}
