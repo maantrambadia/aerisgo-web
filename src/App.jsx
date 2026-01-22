@@ -10,8 +10,8 @@ const SearchResults = lazy(() => import("@/pages/SearchResults.jsx"));
 const FlightDetails = lazy(() => import("@/pages/FlightDetails.jsx"));
 const SeatSelection = lazy(() => import("@/pages/SeatSelection.jsx"));
 const PassengerDetails = lazy(() => import("@/pages/PassengerDetails.jsx"));
-const BookingConfirmation = lazy(() =>
-  import("@/pages/BookingConfirmation.jsx")
+const BookingConfirmation = lazy(
+  () => import("@/pages/BookingConfirmation.jsx"),
 );
 const SignIn = lazy(() => import("@/pages/SignIn.jsx"));
 const SignUp = lazy(() => import("@/pages/SignUp.jsx"));
@@ -23,6 +23,7 @@ const CheckIn = lazy(() => import("@/pages/CheckIn.jsx"));
 const MealSelection = lazy(() => import("@/pages/MealSelection.jsx"));
 const BaggageSelection = lazy(() => import("@/pages/BaggageSelection.jsx"));
 const Notifications = lazy(() => import("@/pages/Notifications.jsx"));
+const NotFound = lazy(() => import("@/pages/NotFound.jsx"));
 
 const router = createBrowserRouter([
   {
@@ -179,6 +180,14 @@ const router = createBrowserRouter([
           <ResetPassword />
         </Suspense>
       </RequireGuest>
+    ),
+  },
+  {
+    path: "*",
+    element: (
+      <Suspense fallback={<LoadingFallback />}>
+        <NotFound />
+      </Suspense>
     ),
   },
 ]);
