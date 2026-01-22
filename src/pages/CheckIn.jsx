@@ -51,7 +51,9 @@ export default function CheckIn() {
       setBooking(booking);
       setEligibility(eligibilityRes);
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to load booking");
+      toast.error(
+        error?.response?.data?.message || "We couldn't load this booking.",
+      );
       navigate("/account");
     } finally {
       setLoading(false);
@@ -64,14 +66,16 @@ export default function CheckIn() {
       const response = await performCheckIn(id);
       const gate =
         response.boardingPass?.gate || booking.flightId?.gate || "TBA";
-      toast.success(`Check-in successful! Gate: ${gate}`);
+      toast.success(`Check-in successful. Gate: ${gate}.`);
 
       // Navigate to account page to view boarding pass
       setTimeout(() => {
         navigate("/account");
       }, 1500);
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Check-in failed");
+      toast.error(
+        error?.response?.data?.message || "We couldn't complete check-in.",
+      );
     } finally {
       setChecking(false);
     }
@@ -254,7 +258,7 @@ export default function CheckIn() {
                     const age = passenger.dateOfBirth
                       ? Math.floor(
                           (new Date() - new Date(passenger.dateOfBirth)) /
-                            (365.25 * 24 * 60 * 60 * 1000)
+                            (365.25 * 24 * 60 * 60 * 1000),
                         )
                       : null;
 
@@ -342,7 +346,7 @@ export default function CheckIn() {
                         {(booking.mealPreference ||
                           (booking.passengers &&
                             booking.passengers.some(
-                              (p) => p.mealPreference
+                              (p) => p.mealPreference,
                             ))) && (
                           <div className="mb-2 text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
                             <Check className="h-3 w-3" />

@@ -67,7 +67,9 @@ export default function ProfileTab() {
       const data = await getDocuments();
       setDocuments(data.documents || []);
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to load documents");
+      toast.error(
+        error?.response?.data?.message || "We couldn't load your documents.",
+      );
     }
   };
 
@@ -79,11 +81,13 @@ export default function ProfileTab() {
         phone: `+91${profileData.phone}`,
         gender: profileData.gender,
       });
-      toast.success("Profile updated successfully");
+      toast.success("Your profile has been updated.");
       setEditMode(false);
       await refresh();
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to update profile");
+      toast.error(
+        error?.response?.data?.message || "We couldn't update your profile.",
+      );
     } finally {
       setProfileLoading(false);
     }
@@ -91,7 +95,7 @@ export default function ProfileTab() {
 
   const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error("Passwords do not match");
+      toast.error("Passwords don't match.");
       return;
     }
     try {
@@ -100,7 +104,7 @@ export default function ProfileTab() {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword,
       });
-      toast.success("Password changed successfully");
+      toast.success("Your password has been updated.");
       setShowPasswordDialog(false);
       setPasswordData({
         currentPassword: "",
@@ -109,7 +113,7 @@ export default function ProfileTab() {
       });
     } catch (error) {
       toast.error(
-        error?.response?.data?.message || "Failed to change password"
+        error?.response?.data?.message || "We couldn't change your password.",
       );
     } finally {
       setPasswordLoading(false);
@@ -123,12 +127,14 @@ export default function ProfileTab() {
         documentType: editingDocType,
         documentNumber: documentNumber.toUpperCase(),
       });
-      toast.success("Document saved successfully");
+      toast.success("Document saved.");
       setShowDocumentDialog(false);
       setDocumentNumber("");
       loadDocuments();
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to save document");
+      toast.error(
+        error?.response?.data?.message || "We couldn't save this document.",
+      );
     } finally {
       setDocumentLoading(false);
     }
@@ -138,11 +144,11 @@ export default function ProfileTab() {
     if (!confirm("Are you sure you want to delete this document?")) return;
     try {
       await deleteDocument(docType);
-      toast.success("Document deleted successfully");
+      toast.success("Document deleted.");
       loadDocuments();
     } catch (error) {
       toast.error(
-        error?.response?.data?.message || "Failed to delete document"
+        error?.response?.data?.message || "We couldn't delete this document.",
       );
     }
   };

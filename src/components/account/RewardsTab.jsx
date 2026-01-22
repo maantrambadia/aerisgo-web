@@ -24,7 +24,9 @@ export default function RewardsTab() {
       setRewardsData(data);
       setTransactions(data.recentTransactions || []);
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to load rewards");
+      toast.error(
+        error?.response?.data?.message || "We couldn't load your rewards.",
+      );
     } finally {
       setLoading(false);
     }

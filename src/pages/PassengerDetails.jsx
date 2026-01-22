@@ -119,11 +119,11 @@ export default function PassengerDetails() {
       onSeatUnlocked: (data) => {
         // Check if any of our seats were unlocked
         const affectedSeats = allSeats.filter(
-          (seat) => seat.seatNumber === data.seatNumber
+          (seat) => seat.seatNumber === data.seatNumber,
         );
         if (affectedSeats.length > 0) {
           toast.error(
-            `Seat ${data.seatNumber} was released by admin. Redirecting...`
+            `Seat ${data.seatNumber} was released by an admin. Redirecting...`,
           );
           setTimeout(() => {
             navigate("/");
@@ -133,11 +133,11 @@ export default function PassengerDetails() {
       onSeatExpired: (data) => {
         // Check if any of our seats expired
         const affectedSeats = allSeats.filter(
-          (seat) => seat.seatNumber === data.seatNumber
+          (seat) => seat.seatNumber === data.seatNumber,
         );
         if (affectedSeats.length > 0) {
           toast.error(
-            `Your selection for seat ${data.seatNumber} has expired. Redirecting...`
+            `Your selection for seat ${data.seatNumber} has expired. Redirecting...`,
           );
           setTimeout(() => {
             navigate("/");
@@ -148,7 +148,7 @@ export default function PassengerDetails() {
         console.error("Socket error:", error);
       },
     }),
-    [allSeats, navigate]
+    [allSeats, navigate],
   );
 
   // Initialize Socket.IO connection for both flights if round-trip
@@ -179,7 +179,7 @@ export default function PassengerDetails() {
       if (remaining === 0) {
         clearInterval(timerRef.current);
         toast.error(
-          "Time expired! Your seat selection has expired. Please select again."
+          "Time's up. Your seat selection expired—please select your seats again.",
         );
         setTimeout(() => {
           navigate("/");
@@ -232,7 +232,7 @@ export default function PassengerDetails() {
       setPassengers(initialPassengers);
     } catch (err) {
       console.error("Failed to fetch user profile:", err);
-      toast.error("Failed to load user profile");
+      toast.error("We couldn't load your profile.");
     } finally {
       setLoading(false);
     }
@@ -247,7 +247,7 @@ export default function PassengerDetails() {
     const parts = collapsed.split(" ");
     const titleCased = parts
       .map((w) =>
-        w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : ""
+        w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : "",
       )
       .join(" ");
     // Avoid double trailing spaces
@@ -262,7 +262,7 @@ export default function PassengerDetails() {
 
   function handlePassengerChange(index, field, value) {
     setPassengers((prev) =>
-      prev.map((p, i) => (i === index ? { ...p, [field]: value } : p))
+      prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)),
     );
   }
 
@@ -270,35 +270,35 @@ export default function PassengerDetails() {
     for (let i = 0; i < passengers.length; i++) {
       const p = passengers[i];
       if (!p.fullName || !p.fullName.trim()) {
-        toast.error(`Please enter name for passenger ${i + 1}`);
+        toast.error(`Please enter the full name for passenger ${i + 1}.`);
         return false;
       }
       if (!p.dateOfBirth) {
-        toast.error(`Please enter date of birth for passenger ${i + 1}`);
+        toast.error(`Please enter the date of birth for passenger ${i + 1}.`);
         return false;
       }
       if (!p.gender) {
-        toast.error(`Please select gender for passenger ${i + 1}`);
+        toast.error(`Please select a gender for passenger ${i + 1}.`);
         return false;
       }
       if (!p.documentType) {
-        toast.error(`Please select document type for passenger ${i + 1}`);
+        toast.error(`Please select a document type for passenger ${i + 1}.`);
         return false;
       }
       if (!p.documentNumber || !p.documentNumber.trim()) {
-        toast.error(`Please enter document number for passenger ${i + 1}`);
+        toast.error(`Please enter a document number for passenger ${i + 1}.`);
         return false;
       }
       // Validate document number format
       if (p.documentType === "aadhar" && !isValidAadhar(p.documentNumber)) {
-        toast.error(`Aadhar must be 12 digits for passenger ${i + 1}`);
+        toast.error(`Aadhar must be 12 digits for passenger ${i + 1}.`);
         return false;
       }
       if (p.documentType === "passport" && !isValidPassport(p.documentNumber)) {
         toast.error(
           `Passport format: 1 letter + 7 digits (e.g., A1234567) for passenger ${
             i + 1
-          }`
+          }.`,
         );
         return false;
       }
@@ -319,7 +319,7 @@ export default function PassengerDetails() {
 
     sessionStorage.setItem(
       `booking_${displayFlight._id}`,
-      JSON.stringify(updatedBookingData)
+      JSON.stringify(updatedBookingData),
     );
 
     navigate(`/booking-confirmation/${displayFlight._id}`);
@@ -687,8 +687,8 @@ export default function PassengerDetails() {
                     passenger.documentType === "aadhar"
                       ? "123456789012"
                       : passenger.documentType === "passport"
-                      ? "A1234567"
-                      : "Enter document number"
+                        ? "A1234567"
+                        : "Enter document number"
                   }
                   value={passenger.documentNumber}
                   onChange={(e) => {
@@ -728,8 +728,8 @@ export default function PassengerDetails() {
                     passenger.documentType === "aadhar"
                       ? 12
                       : passenger.documentType === "passport"
-                      ? 8
-                      : 20
+                        ? 8
+                        : 20
                   }
                   className="uppercase"
                 />

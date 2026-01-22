@@ -131,7 +131,7 @@ export default function BookingConfirmation() {
         );
         if (affectedSeats.length > 0) {
           toast.error(
-            `Seat ${data.seatNumber} was released by admin. Redirecting...`,
+            `Seat ${data.seatNumber} was released by an admin. Redirecting...`,
           );
           setTimeout(() => {
             navigate("/");
@@ -190,7 +190,7 @@ export default function BookingConfirmation() {
       if (remaining === 0) {
         clearInterval(timerRef.current);
         toast.error(
-          "Time expired! Your seat selection has expired. Please select again.",
+          "Time's up. Your seat selection expired—please select your seats again.",
         );
         setTimeout(() => {
           navigate("/");
@@ -355,7 +355,7 @@ export default function BookingConfirmation() {
   function handleUseRewards() {
     const maxUsable = Math.min(rewardBalance, Math.floor(pricing.total));
     setRewardPointsToUse(maxUsable);
-    toast.success(`${maxUsable} points applied (₹${maxUsable} discount)`);
+    toast.success(`${maxUsable} points applied (₹${maxUsable} off).`);
   }
 
   // Format time remaining
@@ -372,19 +372,19 @@ export default function BookingConfirmation() {
   async function handlePayment() {
     // Validate card details
     if (!cardNumber || cardNumber.replace(/\s/g, "").length < 13) {
-      toast.error("Please enter a valid card number");
+      toast.error("Please enter a valid card number.");
       return;
     }
     if (!cardName || cardName.trim().length < 3) {
-      toast.error("Please enter cardholder name");
+      toast.error("Please enter the cardholder name.");
       return;
     }
     if (!expiryDate || expiryDate.length !== 5) {
-      toast.error("Please enter expiry date (MM/YY)");
+      toast.error("Please enter the expiry date (MM/YY).");
       return;
     }
     if (!cvv || cvv.length < 3) {
-      toast.error("Please enter CVV");
+      toast.error("Please enter the CVV.");
       return;
     }
 
@@ -438,14 +438,14 @@ export default function BookingConfirmation() {
       if (err?.response?.data?.requiresDocument) {
         toast.error(
           err?.response?.data?.message ||
-            "Please add your identification document",
+            "Please add your identification document to continue.",
         );
         setTimeout(() => {
           navigate("/account?tab=profile");
         }, 2000);
       } else {
         toast.error(
-          err?.response?.data?.message || "Failed to complete booking",
+          err?.response?.data?.message || "We couldn't complete your booking.",
         );
       }
       setProcessing(false);

@@ -190,12 +190,12 @@ export default function SearchResults() {
   const isRoundTrip = tripType === "round-trip";
 
   useDocumentTitle(
-    isRoundTrip ? `${from} ⇄ ${to} Flights` : `${from} → ${to} Flights`
+    isRoundTrip ? `${from} ⇄ ${to} Flights` : `${from} → ${to} Flights`,
   );
 
   useEffect(() => {
     if (!from || !to || !date) {
-      toast.error("Missing search parameters");
+      toast.error("Missing search details. Please try again.");
       navigate("/");
       return;
     }
@@ -218,7 +218,7 @@ export default function SearchResults() {
       setReturnFlights(data.returnFlights || []);
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to fetch flights");
-      toast.error(err?.response?.data?.message || "Failed to fetch flights");
+      toast.error(err?.response?.data?.message || "We couldn't load flights.");
     } finally {
       setLoading(false);
     }
@@ -231,11 +231,11 @@ export default function SearchResults() {
     switch (sortBy) {
       case "price-low":
         return flightsCopy.sort(
-          (a, b) => (a.baseFare || 0) - (b.baseFare || 0)
+          (a, b) => (a.baseFare || 0) - (b.baseFare || 0),
         );
       case "price-high":
         return flightsCopy.sort(
-          (a, b) => (b.baseFare || 0) - (a.baseFare || 0)
+          (a, b) => (b.baseFare || 0) - (a.baseFare || 0),
         );
       case "duration-short":
         return flightsCopy.sort((a, b) => {
@@ -251,11 +251,11 @@ export default function SearchResults() {
         });
       case "departure-early":
         return flightsCopy.sort(
-          (a, b) => new Date(a.departureTime) - new Date(b.departureTime)
+          (a, b) => new Date(a.departureTime) - new Date(b.departureTime),
         );
       case "departure-late":
         return flightsCopy.sort(
-          (a, b) => new Date(b.departureTime) - new Date(a.departureTime)
+          (a, b) => new Date(b.departureTime) - new Date(a.departureTime),
         );
       default:
         return flightsCopy;
@@ -445,7 +445,7 @@ export default function SearchResults() {
                       if (isRoundTrip) {
                         setSelectedOutbound(flight);
                         toast.success(
-                          "Outbound flight selected. Now select return flight."
+                          "Outbound flight selected. Now choose your return flight.",
                         );
                         // Scroll to return flights section
                         setTimeout(() => {
@@ -467,7 +467,7 @@ export default function SearchResults() {
                             date,
                             passengers,
                             tripType: "one-way",
-                          })
+                          }),
                         );
                         navigate(`/flight/${flight._id}`);
                       }
@@ -514,7 +514,7 @@ export default function SearchResults() {
                             onClick={() => {
                               if (!selectedOutbound) {
                                 toast.error(
-                                  "Please select an outbound flight first"
+                                  "Please select an outbound flight first.",
                                 );
                                 window.scrollTo({ top: 0, behavior: "smooth" });
                                 return;
@@ -533,10 +533,10 @@ export default function SearchResults() {
                                   returnDate,
                                   passengers,
                                   tripType: "round-trip",
-                                })
+                                }),
                               );
 
-                              toast.success("Both flights selected!");
+                              toast.success("Both flights selected.");
                               navigate(`/flight/${selectedOutbound._id}`);
                             }}
                           />

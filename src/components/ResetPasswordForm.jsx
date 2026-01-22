@@ -37,7 +37,7 @@ export function ResetPasswordForm({ className, ...props }) {
     try {
       // Validate OTP
       if (otp.length !== 6) {
-        toast.error("Please enter the complete 6-digit code");
+        toast.error("Please enter the full 6-digit code.");
         return;
       }
 
@@ -48,7 +48,7 @@ export function ResetPasswordForm({ className, ...props }) {
         !/\d/.test(password)
       ) {
         toast.error(
-          "Password must be at least 8 characters and include at least one letter and one number."
+          "Password must be at least 8 characters and include at least one letter and one number.",
         );
         return;
       }
@@ -64,11 +64,11 @@ export function ResetPasswordForm({ className, ...props }) {
         newPassword: password,
       });
 
-      toast.success(data.message || "Password reset successfully!");
+      toast.success(data.message || "Your password has been reset.");
       navigate("/sign-in");
     } catch (error) {
       const message =
-        error?.response?.data?.message || "Failed to reset password";
+        error?.response?.data?.message || "We couldn't reset your password.";
       toast.error(message);
     } finally {
       setLoading(false);
@@ -88,10 +88,12 @@ export function ResetPasswordForm({ className, ...props }) {
       const { data } = await api.post("/auth/password/reset/otp/resend", {
         email,
       });
-      toast.success(data.message || "Reset code resent!");
+      toast.success(data.message || "A new reset code has been sent.");
       setOtp("");
     } catch (error) {
-      const message = error?.response?.data?.message || "Failed to resend code";
+      const message =
+        error?.response?.data?.message ||
+        "We couldn't resend the code. Please try again.";
       toast.error(message);
     } finally {
       setResending(false);

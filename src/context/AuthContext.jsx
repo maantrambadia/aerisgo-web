@@ -49,7 +49,7 @@ export function AuthProvider({ children }) {
 
       // Check if user is passenger
       if (data.user.role !== "passenger") {
-        toast.error("Only passengers can access the web app");
+        toast.error("Only passengers can access the web app.");
         throw new Error("Invalid role");
       }
 
@@ -58,7 +58,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem("aerisgo_user", JSON.stringify(data.user));
       setUser(data.user);
 
-      toast.success("Signed in successfully!");
+      toast.success("Signed in successfully.");
       return data.user;
     } catch (err) {
       const status = err?.response?.status;
@@ -70,7 +70,7 @@ export function AuthProvider({ children }) {
       // User doesn't exist - redirect to sign-up
       if (status === 404 && userNotFound) {
         toast.error(
-          "No account found with this email. Redirecting to sign up..."
+          "No account found with this email. Redirecting to sign up...",
         );
         const error = new Error("user_not_found");
         error.redirectToSignUp = true;
@@ -91,7 +91,7 @@ export function AuthProvider({ children }) {
         // Resend OTP
         try {
           await api.post("/auth/email/otp/resend", { email });
-          toast.success("Verification code sent to your email");
+          toast.success("A verification code has been sent to your email.");
         } catch (resendErr) {
           console.error("Failed to resend OTP:", resendErr);
         }
@@ -114,7 +114,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     localStorage.removeItem("aerisgo_user");
     localStorage.removeItem("aerisgo_token");
-    toast.success("Signed out");
+    toast.success("Signed out.");
   }, []);
 
   useEffect(() => {
@@ -123,7 +123,7 @@ export function AuthProvider({ children }) {
 
   const value = useMemo(
     () => ({ user, loading, refresh, login, logout }),
-    [user, loading, refresh, login, logout]
+    [user, loading, refresh, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

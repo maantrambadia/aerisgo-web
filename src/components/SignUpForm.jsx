@@ -29,7 +29,7 @@ export function SignUpForm({ className, ...props }) {
       .replace(/\s+/g, " ")
       .replace(
         /\b([A-Za-z])(\w*)/g,
-        (_, f, rest) => f.toUpperCase() + rest.toLowerCase()
+        (_, f, rest) => f.toUpperCase() + rest.toLowerCase(),
       );
   }
 
@@ -50,7 +50,9 @@ export function SignUpForm({ className, ...props }) {
     try {
       // Validations
       if (!name || !/^[A-Za-z ]+$/.test(name)) {
-        toast.error("Full Name must contain only letters and spaces.");
+        toast.error(
+          "Please enter a valid full name (letters and spaces only).",
+        );
         return;
       }
 
@@ -61,7 +63,7 @@ export function SignUpForm({ className, ...props }) {
         !/\d/.test(password)
       ) {
         toast.error(
-          "Password must be at least 8 characters and include at least one letter and one number."
+          "Password must be at least 8 characters and include at least one letter and one number.",
         );
         return;
       }
@@ -72,7 +74,7 @@ export function SignUpForm({ className, ...props }) {
       }
 
       if (phone.length !== 10) {
-        toast.error("Phone number must be exactly 10 digits.");
+        toast.error("Please enter a valid 10-digit phone number.");
         return;
       }
 
@@ -91,12 +93,13 @@ export function SignUpForm({ className, ...props }) {
 
       const { data } = await api.post("/auth/sign-up", payload);
       toast.success(
-        data.message || "Account created! Please verify your email."
+        data.message ||
+          "Account created. Please verify your email to continue.",
       );
       navigate("/verify-otp", { state: { email: email.trim() } });
     } catch (error) {
       const message =
-        error?.response?.data?.message || "Failed to create account";
+        error?.response?.data?.message || "We couldn't create your account.";
       toast.error(message);
     } finally {
       setLoading(false);

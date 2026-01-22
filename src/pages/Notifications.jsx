@@ -30,7 +30,7 @@ export default function Notifications() {
       setItems(Array.isArray(list) ? list : []);
     } catch (err) {
       const message =
-        err?.response?.data?.message || "Failed to load notifications";
+        err?.response?.data?.message || "We couldn't load notifications.";
       setError(message);
       toast.error(message);
     } finally {
@@ -79,7 +79,7 @@ export default function Notifications() {
 
   const unreadCount = useMemo(
     () => items.filter((n) => !n.isRead).length,
-    [items]
+    [items],
   );
 
   async function handleClickNotification(item) {
@@ -91,8 +91,8 @@ export default function Notifications() {
         prev.map((n) =>
           n._id === item._id
             ? { ...n, isRead: true, readAt: new Date().toISOString() }
-            : n
-        )
+            : n,
+        ),
       );
 
       await markNotificationRead(item._id);

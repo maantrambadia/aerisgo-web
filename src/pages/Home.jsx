@@ -339,19 +339,19 @@ export default function Home() {
                     const destCity = parseCityName(to);
 
                     if (!sourceCity || !destCity) {
-                      toast.error("Please select departure and arrival cities");
+                      toast.error("Please select a departure city and an arrival city.");
                       return;
                     }
 
                     if (sourceCity.toLowerCase() === destCity.toLowerCase()) {
                       toast.error(
-                        "Departure and arrival cities must be different"
+                        "Departure and arrival cities must be different."
                       );
                       return;
                     }
 
                     if (!date) {
-                      toast.error("Please select a departure date");
+                      toast.error("Please select a departure date.");
                       return;
                     }
 
@@ -361,14 +361,14 @@ export default function Home() {
                     selectedDate.setHours(0, 0, 0, 0);
 
                     if (selectedDate < today) {
-                      toast.error("Departure date cannot be in the past");
+                      toast.error("Departure date can't be in the past.");
                       return;
                     }
 
                     // Validate return date for round-trip
                     if (tripType === "round-trip") {
                       if (!returnDate) {
-                        toast.error("Please select a return date");
+                        toast.error("Please select a return date.");
                         return;
                       }
 
@@ -376,7 +376,7 @@ export default function Home() {
                       selectedReturnDate.setHours(0, 0, 0, 0);
 
                       if (selectedReturnDate <= selectedDate) {
-                        toast.error("Return date must be after departure date");
+                        toast.error("Return date must be after the departure date.");
                         return;
                       }
                     }

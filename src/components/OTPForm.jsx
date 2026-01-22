@@ -31,7 +31,7 @@ export function OTPForm({ className, ...props }) {
     e.preventDefault();
 
     if (otp.length !== 6) {
-      toast.error("Please enter the complete 6-digit code");
+      toast.error("Please enter the full 6-digit code.");
       return;
     }
 
@@ -54,12 +54,12 @@ export function OTPForm({ className, ...props }) {
         // Refresh auth state to update user in context
         await refresh();
 
-        toast.success("Email verified! Welcome to AerisGo!");
+        toast.success("Email verified. Welcome to AerisGo!");
         navigate("/", { replace: true });
       } else {
         // Fallback if no token (shouldn't happen)
         localStorage.removeItem("pending_verification_email");
-        toast.success(data.message || "Email verified successfully!");
+        toast.success(data.message || "Email verified successfully.");
         navigate("/sign-in");
       }
     } catch (error) {
@@ -73,7 +73,7 @@ export function OTPForm({ className, ...props }) {
 
   const handleResend = async () => {
     if (!email) {
-      toast.error("Email not found. Please sign up again.");
+      toast.error("We couldn't find your email. Please sign up again.");
       navigate("/sign-up");
       return;
     }
@@ -82,10 +82,12 @@ export function OTPForm({ className, ...props }) {
 
     try {
       const { data } = await api.post("/auth/email/otp/resend", { email });
-      toast.success(data.message || "Verification code resent!");
+      toast.success(data.message || "A new verification code has been sent.");
       setOtp(""); // Clear the OTP input
     } catch (error) {
-      const message = error?.response?.data?.message || "Failed to resend code";
+      const message =
+        error?.response?.data?.message ||
+        "We couldn't resend the code. Please try again.";
       toast.error(message);
     } finally {
       setResending(false);

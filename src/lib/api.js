@@ -22,7 +22,7 @@ api.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor - Handle errors globally
@@ -47,14 +47,16 @@ api.interceptors.response.use(
           current !== "/forgot-password" &&
           current !== "/reset-password"
         ) {
-          toast.error(message || "Session expired. Please sign in again.");
+          toast.error(
+            message || "Your session has expired. Please sign in again.",
+          );
           window.location.assign("/sign-in");
         }
       }
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

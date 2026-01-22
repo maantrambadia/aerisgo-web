@@ -39,7 +39,9 @@ export default function TicketsTab() {
       const data = await getMyBookings({ limit: 100 });
       setBookings(data.items || []);
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to load bookings");
+      toast.error(
+        error?.response?.data?.message || "We couldn't load your bookings.",
+      );
     } finally {
       setLoading(false);
     }
@@ -67,7 +69,7 @@ export default function TicketsTab() {
       if (booking.bookingType === "round-trip" && booking.linkedBookingId) {
         // Find the linked booking
         const linkedBooking = bookings.find(
-          (b) => b._id === booking.linkedBookingId
+          (b) => b._id === booking.linkedBookingId,
         );
 
         if (linkedBooking) {
@@ -169,8 +171,8 @@ export default function TicketsTab() {
             {filter === "upcoming"
               ? "Book your next flight to see it here"
               : filter === "past"
-              ? "Your completed flights will appear here"
-              : "Your cancelled bookings will appear here"}
+                ? "Your completed flights will appear here"
+                : "Your cancelled bookings will appear here"}
           </p>
         </Card>
       ) : (
@@ -562,7 +564,7 @@ export default function TicketsTab() {
               {selectedBooking.status === "confirmed" &&
                 (() => {
                   const departureDate = new Date(
-                    selectedBooking.flightId.departureTime
+                    selectedBooking.flightId.departureTime,
                   );
                   const now = new Date();
                   const hoursUntilDeparture =

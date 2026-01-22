@@ -61,11 +61,11 @@ export default function CancellationDialog({
     try {
       setLoading(true);
       const response = await api.get(
-        `/bookings/${booking._id}/cancellation-preview`
+        `/bookings/${booking._id}/cancellation-preview`,
       );
       setPreview(response.data);
     } catch (error) {
-      toast.error("Failed to load cancellation preview");
+      toast.error("We couldn't load the cancellation details.");
       onClose();
     } finally {
       setLoading(false);
@@ -74,7 +74,7 @@ export default function CancellationDialog({
 
   async function handleCancel() {
     if (!reason) {
-      toast.error("Please select a cancellation reason");
+      toast.error("Please select a cancellation reason.");
       return;
     }
 
@@ -90,11 +90,13 @@ export default function CancellationDialog({
         reason: fullReason,
       });
 
-      toast.success("Booking cancelled successfully");
+      toast.success("Your booking has been cancelled.");
       onSuccess?.();
       onClose();
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to cancel booking");
+      toast.error(
+        error?.response?.data?.message || "We couldn't cancel this booking.",
+      );
     } finally {
       setCancelling(false);
     }
@@ -303,8 +305,8 @@ export default function CancellationDialog({
               {cancelling
                 ? "Processing..."
                 : step === 1
-                ? "Proceed to Cancel"
-                : "Confirm Cancellation"}
+                  ? "Proceed to Cancel"
+                  : "Confirm Cancellation"}
             </Button>
           )}
         </DialogFooter>

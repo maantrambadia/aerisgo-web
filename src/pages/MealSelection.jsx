@@ -73,7 +73,7 @@ export default function MealSelection() {
       const errorMessage =
         error?.response?.data?.message ||
         error?.message ||
-        "Failed to load data";
+        "We couldn't load meal options.";
       toast.error(errorMessage);
       navigate(-1);
     } finally {
@@ -90,11 +90,11 @@ export default function MealSelection() {
         ([seatNumber, mealId]) => ({
           seatNumber,
           mealId,
-        })
+        }),
       );
 
       await updateMealPreference(id, { passengerMeals });
-      toast.success("Meal preferences saved!");
+      toast.success("Meal preferences saved.");
 
       // Navigate to next step
       const from = location.state?.from;
@@ -107,7 +107,8 @@ export default function MealSelection() {
       }
     } catch (error) {
       toast.error(
-        error?.response?.data?.message || "Failed to save meal preferences"
+        error?.response?.data?.message ||
+          "We couldn't save your meal preferences.",
       );
     } finally {
       setSaving(false);

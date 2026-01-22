@@ -39,7 +39,8 @@ export default function BaggageSelection() {
       setBaggageInfo(data);
     } catch (error) {
       toast.error(
-        error?.response?.data?.message || "Failed to load baggage information"
+        error?.response?.data?.message ||
+          "We couldn't load baggage information.",
       );
       navigate(-1);
     } finally {
@@ -48,7 +49,7 @@ export default function BaggageSelection() {
   }
 
   function handleContinue() {
-    toast.success("Baggage allowance confirmed!");
+    toast.success("Baggage allowance confirmed.");
     const from = location.state?.from;
     if (from === "booking") {
       navigate(`/passenger-details/${id}`, { state: { from: "booking" } });

@@ -25,11 +25,14 @@ export function ForgotPasswordForm({ className, ...props }) {
         email: email.trim(),
       });
 
-      toast.success(data.message || "Reset code sent to your email!");
+      toast.success(
+        data.message || "A reset code has been sent to your email.",
+      );
       navigate("/reset-password", { state: { email: email.trim() } });
     } catch (error) {
       const message =
-        error?.response?.data?.message || "Failed to send reset code";
+        error?.response?.data?.message ||
+        "We couldn't send the reset code. Please try again.";
       toast.error(message);
     } finally {
       setLoading(false);
